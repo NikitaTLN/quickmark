@@ -539,7 +539,7 @@ def main(page: ft.Page):
 
     def make_tab_btn(label, idx):
         return ft.Container(
-            content=ft.Text(label, size=14, color=ACCENT if idx == 0 else MUTED, weight="bold"),
+            content=ft.Text(label, size=14, color=TEXT if idx == 0 else MUTED, weight="bold"),
             padding=ft.padding.symmetric(horizontal=20, vertical=12),
             on_click=lambda e: switch_main_tab(idx),
             data=idx,
@@ -1041,7 +1041,7 @@ a {{ color: var(--primary); }}
         settings_tab_content.visible = idx == 2
 
         for btn, i in [(editor_tab_btn, 0), (themes_tab_btn, 1), (settings_tab_btn, 2)]:
-            btn.content.color = ACCENT if i == idx else MUTED
+            btn.content.color = TEXT if i == idx else MUTED
             btn.bgcolor = ACCENT if i == idx else None
 
         center_area.update()

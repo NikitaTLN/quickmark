@@ -25,7 +25,10 @@ def generate_site(content_dir, template_path, output_dir, static_dir, base_path=
         if not os.path.exists(output_file_dir):
             os.makedirs(output_file_dir)
 
-        html = generate_page(markdown, template, base_path)
+        depth = relative_path.count(os.sep)
+        relative_prefix = "../" * depth if depth > 0 else ""
+
+        html = generate_page(markdown, template, base_path, relative_prefix)
 
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(html)
