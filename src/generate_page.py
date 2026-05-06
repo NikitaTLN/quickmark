@@ -32,11 +32,11 @@ def generate_page(markdown, template, base_path="/"):
 
     html_content = markdown_to_html(markdown)
 
-    html_content = html_content.replace('href="/', f'href="{base_path}')
-    html_content = html_content.replace('src="/', f'src="{base_path}')
-
     page = template.replace("{{ Title }}", title)
     page = page.replace("{{ Content }}", html_content)
+
+    page = page.replace('href="/', f'href="{base_path}')
+    page = page.replace('src="/', f'src="{base_path}')
 
     return page
 
