@@ -1,16 +1,22 @@
-# Static Site Generator
+# Quickmark — Static Site Generator
 
-A fast, Python-based static site generator that converts Markdown into beautiful HTML — powered by **Flet** and managed with **uv**.
+A fast, cross-platform static site generator with a built-in editor. Write Markdown, generate beautiful HTML — all from one app.
+
+<p align="center">
+  <strong>Linux</strong> · <strong>Windows</strong> · <strong>macOS</strong>
+</p>
 
 ## Features
 
+- **Built-in editor** — create, edit, and save Markdown files without leaving the app
+- **File explorer** — browse your project files in a sidebar
 - **Markdown to HTML** — full inline support for `**bold**`, `_italic_`, `` `code` ``, [links](url), and ![images](url)
 - **Block-level parsing** — headings (h1–h6), paragraphs, code blocks, blockquotes, ordered and unordered lists
 - **HTML templating** — shared template with `{{ Title }}` and `{{ Content }}` placeholders
 - **Recursive content** — nested directories generate nested pages automatically
 - **Static assets** — CSS, images copied seamlessly
 - **GitHub Pages ready** — configurable base path for subdirectory hosting
-- **Web GUI** — beautiful dark-themed Flet interface
+- **Cross-platform** — runs on Linux, Windows, and macOS
 - **Zero dependencies** — Python standard library only for the core engine
 
 ## Quick Start
@@ -26,54 +32,42 @@ A fast, Python-based static site generator that converts Markdown into beautiful
 uv sync
 ```
 
-### Generate the Site
+### Launch the App
 
 ```bash
-./main.sh
-# or
-uv run src/main.py
-```
-
-### Preview Locally
-
-```bash
-./main.sh
-# Site serves at http://localhost:8888
-```
-
-### Launch the GUI
-
-```bash
-./gui.sh
-# or
 uv run gui.py
+```
+
+Opens a web browser with the full editor, file explorer, and build tools.
+
+### Generate the Site (CLI)
+
+```bash
+uv run src/main.py
 ```
 
 ### Production Build (GitHub Pages)
 
 ```bash
 ./build.sh
-# Outputs to docs/ with base path /quickmark/
 ```
 
 ### Run Tests
 
 ```bash
 ./test.sh
-# or
-uv run python -m unittest discover -s src
 ```
 
 ## Project Structure
 
 ```
-├── content/              # Markdown source files
+├── content/              # Markdown source files (edit these)
 │   ├── index.md          # Home page
 │   ├── blog/             # Blog section
 │   └── contact/          # Contact page
 ├── static/               # CSS, images, and other assets
 │   └── styles.css
-├── docs/                 # Generated site output (deploy this on GitHub Pages)
+├── docs/                 # Generated site (deploy this on GitHub Pages)
 ├── template.html         # HTML page template
 ├── src/                  # Core engine
 │   ├── main.py           # Entry point and orchestrator
@@ -82,45 +76,32 @@ uv run python -m unittest discover -s src
 │   ├── inline_markdown.py # Inline Markdown parsing
 │   ├── htmlnode.py       # HTML node classes
 │   └── textnode.py       # Text node classes
-├── gui.py                # Flet web GUI
+├── gui.py                # Cross-platform GUI with built-in editor
 ├── pyproject.toml        # uv project configuration
-├── main.sh               # Build and serve locally
 ├── build.sh              # Production build script
+├── main.sh               # Build and serve locally
 ├── test.sh               # Test runner
 └── gui.sh                # Launch GUI
 ```
 
-## Customizing Your Site
+## Using the App
 
-### Edit Content
+The GUI has three panels:
 
-All pages are Markdown files in `content/`. The directory structure mirrors the URL structure:
+**Left sidebar** — file explorer showing all editable files (`.md`, `.css`, `.html`, etc.)
+- Click any file to open it in the editor
+- Click **+** to create a new Markdown file
+- Click **⟳** to refresh the file list
+- Click the folder icon to open the content directory
 
-| File | URL |
-|------|-----|
-| `content/index.md` | `/` |
-| `content/blog/index.md` | `/blog/` |
-| `content/blog/post1.md` | `/blog/post1` |
+**Center** — text editor with monospace font
+- Edit any opened file
+- Click **Save** (or just hit Generate — it auto-saves dirty files first)
 
-Create new pages by adding `.md` files — they auto-generate on build.
-
-### Add Images
-
-1. Place files in `static/images/`
-2. Reference in any Markdown file: `![alt text](/images/photo.png)`
-
-### Change Styling
-
-Edit `static/styles.css` — changes apply to all pages instantly.
-
-### Change Page Layout
-
-Edit `template.html` to modify the HTML wrapper. Placeholders are replaced automatically:
-
-```html
-{{ Title }}   → Extracted from the first H1 heading
-{{ Content }} → Converted Markdown content
-```
+**Right panel** — settings and build controls
+- **Base Path** — URL prefix for GitHub Pages (default: `/quickmark/`)
+- **Generate** — build the entire site to `docs/`
+- **Preview** — start a local server at `http://localhost:8888`
 
 ## Markdown Support
 
@@ -137,21 +118,55 @@ Edit `template.html` to modify the HTML wrapper. Placeholders are replaced autom
 | Ordered list | `1. item` | `<ol><li>item</li></ol>` |
 | Unordered list | `- item` | `<ul><li>item</li></ul>` |
 
+## Customizing Your Site
+
+### Edit Content
+
+All pages are Markdown files in `content/`. The directory structure mirrors the URL structure:
+
+| File | URL |
+|------|-----|
+| `content/index.md` | `/` |
+| `content/blog/index.md` | `/blog/` |
+| `content/blog/post1.md` | `/blog/post1` |
+
+### Add Images
+
+1. Place files in `static/images/`
+2. Reference in any Markdown file: `![alt text](/images/photo.png)`
+
+### Change Styling
+
+Edit `static/styles.css` — open it from the file explorer and save.
+
+### Change Page Layout
+
+Edit `template.html` to modify the HTML wrapper.
+
 ## Deployment
 
-Push to GitHub and enable GitHub Pages on the `docs/` directory. Settings → Pages → Source → Deploy from a branch → main → /docs. For subdirectory hosting, run:
+### GitHub Pages
+
+1. Push to GitHub
+2. **Settings → Pages → Source → Deploy from a branch**
+3. Select branch: `main`, folder: `/docs`
+4. Click **Save**
+
+For subdirectory hosting, set the **Base Path** in the GUI to `/your-repo-name/` before generating.
+
+Your site will be live at `https://YOUR_USERNAME.github.io/YOUR_REPO/`
+
+### Local Preview
+
+Click **Preview** in the GUI, then open `http://localhost:8888` in your browser.
+
+## Building a Standalone Release
+
+To create a standalone executable (no Python required):
 
 ```bash
-uv run src/main.py "/your-repo-name/"
+pip install pyinstaller
+pyinstaller --onefile --add-data "content:content" --add-data "static:static" --add-data "template.html:." --add-data "src:src" gui.py
 ```
 
-## GUI
-
-The web GUI runs in your browser and provides:
-
-- Pre-filled field defaults for quick generation
-- Live output log
-- One-click preview server launch
-- Dark, minimal design
-
-Run `uv run gui.py` and access the URL printed in the terminal.
+The executable will be in `dist/` and works on the same OS it was built on. Build on each platform (Linux, Windows, macOS) for full cross-platform releases.
