@@ -67,6 +67,16 @@ SAMPLE_CONTENT = """
 """
 
 
+def _hex_adjust(hex_color, amount):
+    hex_color = hex_color.lstrip("#")
+    if len(hex_color) != 6:
+        return hex_color
+    r = max(0, min(255, int(hex_color[0:2], 16) + amount))
+    g = max(0, min(255, int(hex_color[2:4], 16) + amount))
+    b = max(0, min(255, int(hex_color[4:6], 16) + amount))
+    return f"#{r:02x}{g:02x}{b:02x}"
+
+
 def make_input(**kwargs):
     defaults = {
         "border_radius": 8,
@@ -640,8 +650,17 @@ def main(page: ft.Page):
     # -- Theme switcher in top bar --
     theme_switcher_status = ft.Text("", size=11, color=GREEN)
 
+    GUI_THEMES = {}
+    for name, css in PRELOADED_THEMES.items():
+        for mp_name, mp in MOOD_PALETTES.items():
+            if mp["bg"] in css:
+                GUI_THEMES[name] = mp
+                break
+    if not GUI_THEMES:
+        GUI_THEMES = MOOD_PALETTES
+
     theme_switcher = ft.Dropdown(
-        options=[ft.dropdown.Option(name) for name in PRELOADED_THEMES.keys()],
+        options=[ft.dropdown.Option(name) for name in GUI_THEMES.keys()],
         width=200,
         border_radius=6,
         filled=True,
@@ -654,6 +673,29 @@ def main(page: ft.Page):
         hint_text="Switch theme...",
         on_select=lambda e: on_quick_theme_switch(e),
     )
+
+    current_gui_theme = {}
+
+    def on_quick_theme_switch(e):
+        name = e.control.value
+        if not name or name not in GUI_THEMES:
+            return
+        p = GUI_THEMES[name]
+        current_gui_theme.update(p)
+
+        sb = p.get("surface", p["bg"])
+        page.bgcolor = p["bg"]
+        sidebar.bgcolor = sb
+        card_bg = p["surface"]
+        input_bg = _hex_adjust(p["surface"], 10)
+        border_color = _hex_adjust(p["surface"], 20)
+
+        editor.field.bgcolor = input_bg
+        output_log.bgcolor = input_bg
+
+        theme_switcher_status.value = f"Applied: {name}"
+        theme_switcher_status.color = p["accent"]
+        page.update()
 
     # -- Main tab bar --
     def make_tab_btn(label, idx):
@@ -952,18 +994,6 @@ def main(page: ft.Page):
         text_size=13,
         on_select=lambda e: on_preloaded_theme(e),
     )
-
-    def on_quick_theme_switch(e):
-        name = e.control.value
-        if not name or name not in PRELOADED_THEMES:
-            return
-        css = PRELOADED_THEMES[name]
-        apply_theme(name, css, DEFAULTS["static"], DEFAULTS["output"])
-        update_preview(css)
-        theme_switcher_status.value = f"Applied: {name}"
-        theme_switcher_status.color = GREEN
-        main_tab_bar.update()
-        toast(f"Applied: {name}")
 
     def on_preloaded_theme(e):
         name = e.control.value
