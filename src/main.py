@@ -48,7 +48,7 @@ def main():
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     content_dir = os.path.join(project_root, "content")
     template_path = os.path.join(project_root, "template.html")
-    output_dir = os.path.join(project_root, "public")
+    output_dir = os.path.join(project_root, "docs")
     static_dir = os.path.join(project_root, "static")
 
     print(f"Generating site with base path: {base_path}")

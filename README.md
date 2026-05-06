@@ -53,7 +53,7 @@ uv run gui.py
 
 ```bash
 ./build.sh
-# Outputs to public/ with base path /static-site-generator/
+# Outputs to docs/ with base path /quickmark/
 ```
 
 ### Run Tests
@@ -73,7 +73,7 @@ uv run python -m unittest discover -s src
 │   └── contact/          # Contact page
 ├── static/               # CSS, images, and other assets
 │   └── styles.css
-├── public/               # Generated site output (do not edit)
+├── docs/                 # Generated site output (deploy this on GitHub Pages)
 ├── template.html         # HTML page template
 ├── src/                  # Core engine
 │   ├── main.py           # Entry point and orchestrator
@@ -139,7 +139,7 @@ Edit `template.html` to modify the HTML wrapper. Placeholders are replaced autom
 
 ## Deployment
 
-Push to GitHub and enable GitHub Pages on the `public/` directory. For subdirectory hosting, run:
+Push to GitHub and enable GitHub Pages on the `docs/` directory. Settings → Pages → Source → Deploy from a branch → main → /docs. For subdirectory hosting, run:
 
 ```bash
 uv run src/main.py "/your-repo-name/"

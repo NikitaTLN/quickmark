@@ -17,7 +17,7 @@ DEFAULTS = {
     "content": os.path.join(PROJECT_ROOT, "content"),
     "static": os.path.join(PROJECT_ROOT, "static"),
     "template": os.path.join(PROJECT_ROOT, "template.html"),
-    "output": os.path.join(PROJECT_ROOT, "public"),
+    "output": os.path.join(PROJECT_ROOT, "docs"),
     "base_path": "/",
 }
 

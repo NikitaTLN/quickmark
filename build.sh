@@ -1,2 +1,2 @@
 #!/bin/bash
-uv run src/main.py "/static-site-generator/"
+uv run src/main.py "/quickmark/"
