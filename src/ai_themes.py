@@ -32,26 +32,33 @@ def validate_api_key(api_key):
 
 def test_api_key(api_key):
     import httpx
-    api_key = api_key.strip().replace('"', '').replace("'", "")
+    api_key = api_key.strip().replace('"', '').replace("'", '')
+    
+    debug_info = []
+    debug_info.append(f"Key starts with: {api_key[:8]}...")
+    debug_info.append(f"Key length: {len(api_key)}")
+    debug_info.append(f"Key contains spaces: {' ' in api_key}")
+    
     try:
         with httpx.Client(timeout=10.0) as client:
             resp = client.post(
                 "https://api.groq.com/openai/v1/chat/completions",
                 headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
                 json={
-                    "model": "llama-3.3-70b-versatile",
+                    "model": "llama-3.1-8b-instant",
                     "messages": [{"role": "user", "content": "Hi"}],
                     "max_tokens": 1,
                 },
             )
+            debug_info.append(f"HTTP status: {resp.status_code}")
+            debug_info.append(f"Response: {resp.text[:300]}")
+            
             if resp.status_code == 200:
-                return True, "Key is valid!"
-            elif resp.status_code == 401:
-                return False, "Invalid API key. Please check https://console.groq.com/keys"
+                return True, "✅ Key is valid!"
             else:
-                return False, f"API error {resp.status_code}: {resp.text[:200]}"
+                return False, f"Error {resp.status_code}:\n" + "\n".join(debug_info)
     except Exception as e:
-        return False, f"Connection failed: {str(e)}"
+        return False, f"Connection failed: {str(e)}\n" + "\n".join(debug_info)
 
 def generate_theme(prompt, content_dir, api_key):
     api_key = api_key.strip().replace('"', '').replace("'", "")
@@ -64,7 +71,7 @@ def generate_theme(prompt, content_dir, api_key):
             "https://api.groq.com/openai/v1/chat/completions",
             headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
             json={
-                "model": "llama-3.3-70b-versatile",
+                "model": "llama-3.1-8b-instant",
                 "messages": [
                     {"role": "system", "content": "You are a master CSS designer. Return ONLY valid CSS. No markdown, no explanations."},
                     {"role": "user", "content": user_prompt},
