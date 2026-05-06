@@ -461,90 +461,91 @@ def main(page: ft.Page):
 
         threading.Thread(target=serve, daemon=True).start()
 
-    dialog_result = {}
+    # -- New page overlay --
+    new_name_field = make_input(label="File name", value="untitled.md", autofocus=True)
+    new_title_field = make_input(label="Display title (nav label)", value="")
+    new_folder_field = make_input(label="Subfolder (optional)", hint_text="e.g. blog, projects", value="")
+    new_page_status = ft.Text("", size=12, color=RED)
 
-    def on_new_file(e):
-        new_name_field = make_input(label="File name", value="untitled.md", autofocus=True)
-        new_title_field = make_input(label="Display title (nav label)", value="")
-        new_folder_field = make_input(label="Subfolder (optional)", hint_text="e.g. blog, projects", value="")
-        status_text = ft.Text("", size=12, color=RED)
-
-        def do_create(_):
-            name = new_name_field.value.strip()
-            title = new_title_field.value.strip()
-            folder = new_folder_field.value.strip() if new_folder_field.value.strip() else None
-            if not name:
-                status_text.value = "File name is required"
-                status_text.color = RED
-                dialog.update()
-                return
-            if not name.endswith(".md"):
-                name += ".md"
-            path, err = create_page(DEFAULTS["content"], name, title, folder)
-            if err:
-                status_text.value = err
-                status_text.color = RED
-                dialog.update()
-                return
-            dialog.open = False
-            page.update()
-            file_tree.reload(DEFAULTS["content"])
-            editor.open_file(path)
-            do_select_file(path)
-            sidebar.update()
-            try:
-                refresh_page_list()
-            except Exception:
-                pass
-            toast("Page created!")
-
-        dialog = ft.AlertDialog(
-            title=ft.Text("New Page"),
+    new_page_overlay = ft.Container(
+        content=ft.Container(
             content=ft.Column([
+                ft.Container(height=40),
+                ft.Text("New Page", size=18, color=TEXT, weight="bold"),
+                ft.Container(height=16),
                 new_name_field,
                 new_title_field,
                 new_folder_field,
-                status_text,
-            ], tight=True, spacing=12, expand=True),
-            actions=[
-                ft.TextButton("Cancel", on_click=lambda e: _close_dialog(dialog)),
-                ft.FilledButton("Create", on_click=do_create),
-            ],
-            actions_alignment=ft.MainAxisAlignment.END,
-        )
-        dialog.open = True
-        page.dialog = dialog
+                new_page_status,
+                ft.Container(height=8),
+                ft.Row([
+                    ft.FilledTonalButton("Cancel", on_click=lambda e: hide_new_page()),
+                    ft.FilledButton("Create", on_click=lambda e: do_create_page()),
+                ]),
+            ], tight=True, spacing=8),
+            width=400,
+            padding=24,
+            bgcolor=CARD,
+            border_radius=12,
+            border=ft.border.all(1, BORDER),
+        ),
+        visible=False,
+        alignment=ft.alignment.center,
+        bgcolor="rgba(0,0,0,0.4)",
+        expand=True,
+        on_click=lambda e: hide_new_page(),
+    )
+
+    def hide_new_page():
+        new_page_overlay.visible = False
+        new_page_status.value = ""
         page.update()
 
-    def _close_dialog(d):
-        d.open = False
+    def do_create_page():
+        name = new_name_field.value.strip()
+        title = new_title_field.value.strip()
+        folder = new_folder_field.value.strip() if new_folder_field.value.strip() else None
+        if not name:
+            new_page_status.value = "File name is required"
+            new_page_status.color = RED
+            new_page_overlay.update()
+            return
+        if not name.endswith(".md"):
+            name += ".md"
+        path, err = create_page(DEFAULTS["content"], name, title, folder)
+        if err:
+            new_page_status.value = err
+            new_page_status.color = RED
+            new_page_overlay.update()
+            return
+        hide_new_page()
+        file_tree.reload(DEFAULTS["content"])
+        editor.open_file(path)
+        do_select_file(path)
+        sidebar.update()
+        try:
+            refresh_page_list()
+        except Exception:
+            pass
+        toast("Page created!")
+
+    def on_new_file(e):
+        new_name_field.value = "untitled.md"
+        new_title_field.value = ""
+        new_folder_field.value = ""
+        new_page_status.value = ""
+        new_page_overlay.visible = True
         page.update()
 
     def on_delete_page(path):
-        def confirm_delete(_):
-            delete_page(path)
-            file_tree.reload(DEFAULTS["content"])
-            try:
-                refresh_page_list()
-            except Exception:
-                pass
-            sidebar.update()
-            dialog.open = False
-            page.update()
-            toast("Page deleted", YELLOW)
-
-        dialog = ft.AlertDialog(
-            title=ft.Text("Delete Page"),
-            content=ft.Text(f"Delete {Path(path).name}?"),
-            actions=[
-                ft.TextButton("Cancel", on_click=lambda e: _close_dialog(dialog)),
-                ft.TextButton("Delete", color=RED, on_click=confirm_delete),
-            ],
-            actions_alignment=ft.MainAxisAlignment.END,
-        )
-        dialog.open = True
-        page.dialog = dialog
-        page.update()
+        delete_page(path)
+        file_tree.reload(DEFAULTS["content"])
+        try:
+            refresh_page_list()
+        except Exception:
+            pass
+        sidebar.update()
+        toast("Page deleted", YELLOW)
 
     file_tree.on_context = on_delete_page
 
@@ -1367,9 +1368,21 @@ a {{ color: var(--primary); }}
                 ft.Divider(color=BORDER, height=1),
                 ft.Stack(
                     [
-                        editor_tab_content,
-                        themes_tab_content,
-                        settings_tab_content,
+                        ft.Column(
+                            [
+                                ft.Stack(
+                                    [
+                                        editor_tab_content,
+                                        themes_tab_content,
+                                        settings_tab_content,
+                                    ],
+                                    expand=True,
+                                ),
+                            ],
+                            spacing=0,
+                            expand=True,
+                        ),
+                        new_page_overlay,
                     ],
                     expand=True,
                 ),
