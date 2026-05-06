@@ -1,2 +1,2 @@
-python3 src/main.py
-
+#!/bin/bash
+uv run src/main.py

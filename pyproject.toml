@@ -1,0 +1,11 @@
+[project]
+name = "static-site-generator"
+version = "0.1.0"
+description = "A static site generator with GUI, converts Markdown to HTML"
+requires-python = ">=3.13"
+dependencies = [
+    "flet>=0.84.0",
+]
+
+[tool.uv]
+package = false
