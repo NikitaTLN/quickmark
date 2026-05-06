@@ -601,19 +601,32 @@ def main(page: ft.Page):
         bgcolor=CARD,
     )
 
-    right_tabs = ft.Tabs(
-        selected_index=0,
-        tabs=[
-            ft.Tab(label="Settings", content=settings_card),
-            ft.Tab(label="Themes", content=themes_card),
-        ],
-        expand=True,
+    tab_buttons = ft.Container(
+        content=ft.Row(
+            [
+                ft.TextButton("Settings", on_click=lambda e: switch_tab(0), data=0, style=ft.ButtonStyle(color=ACCENT)),
+                ft.TextButton("Themes", on_click=lambda e: switch_tab(1), data=1),
+            ],
+            spacing=0,
+        ),
     )
+
+    def switch_tab(idx):
+        settings_card.visible = idx == 0
+        themes_card.visible = idx == 1
+        for btn in tab_buttons.content.controls:
+            btn.style = ft.ButtonStyle(color=ACCENT if btn.data == idx else MUTED)
+        right_panel.update()
+
+    settings_card.visible = True
+    themes_card.visible = False
 
     right_panel = ft.Container(
         content=ft.Column(
             [
-                right_tabs,
+                tab_buttons,
+                settings_card,
+                themes_card,
             ],
             scroll=ft.ScrollMode.AUTO,
         ),
