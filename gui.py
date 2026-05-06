@@ -550,7 +550,10 @@ def main(page: ft.Page):
                 )
             )
         pages_list.controls.append(ft.Divider(color=BORDER, height=8))
-        pages_list.update()
+        try:
+            pages_list.update()
+        except Exception:
+            pass
 
     # -- Sidebar --
     sidebar = ft.Container(
