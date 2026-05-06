@@ -120,7 +120,7 @@ def create_page(content_dir, name, title=None, in_folder=None):
         return None, "File already exists"
     page_title = title or name.replace(".md", "").replace("-", " ").title()
     with open(path, "w", encoding="utf-8") as f:
-        f.write(f"# {page_title}\n\n")
+        f.write(f"# {page_title}\n\n\n")
     return path, None
 
 
