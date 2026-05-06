@@ -461,62 +461,48 @@ def main(page: ft.Page):
 
         threading.Thread(target=serve, daemon=True).start()
 
-    # -- New page overlay --
-    new_name_field = make_input(label="File name", value="untitled.md", autofocus=True)
-    new_title_field = make_input(label="Display title (nav label)", value="")
-    new_folder_field = make_input(label="Subfolder (optional)", hint_text="e.g. blog, projects", value="")
-    new_page_status = ft.Text("", size=12, color=RED)
+    # -- New page form (in sidebar) --
+    new_name_field = make_input(label="File name", value="untitled.md", text_size=12)
+    new_title_field = make_input(label="Display title", value="", text_size=12)
+    new_folder_field = make_input(label="Subfolder", hint_text="e.g. blog, projects", value="", text_size=12)
+    new_page_status = ft.Text("", size=11, color=RED)
 
-    new_page_overlay = ft.Container(
-        content=ft.Container(
-            content=ft.Column([
-                ft.Container(height=40),
-                ft.Text("New Page", size=18, color=TEXT, weight="bold"),
-                ft.Container(height=16),
-                new_name_field,
-                new_title_field,
-                new_folder_field,
-                new_page_status,
-                ft.Container(height=8),
-                ft.Row([
-                    ft.FilledTonalButton("Cancel", on_click=lambda e: hide_new_page()),
-                    ft.FilledButton("Create", on_click=lambda e: do_create_page()),
-                ]),
-            ], tight=True, spacing=8),
-            width=400,
-            padding=24,
-            bgcolor=CARD,
-            border_radius=12,
-            border=ft.border.all(1, BORDER),
-        ),
+    new_page_form = ft.Container(
+        content=ft.Column([
+            ft.Row([
+                ft.Text("New Page", size=11, color=ACCENT, weight="bold"),
+                ft.Container(expand=True),
+                ft.IconButton(icon=Icons.CLOSE, icon_size=14, icon_color=DIM, on_click=lambda e: hide_new_page()),
+            ]),
+            new_name_field,
+            new_title_field,
+            new_folder_field,
+            new_page_status,
+            ft.FilledButton("Create", on_click=lambda e: do_create_page()),
+        ], spacing=4),
+        padding=ft.padding.symmetric(horizontal=12, vertical=8),
         visible=False,
-        alignment="center",
-        bgcolor="rgba(0,0,0,0.4)",
-        expand=True,
-        on_click=lambda e: hide_new_page(),
     )
 
     def hide_new_page():
-        new_page_overlay.visible = False
+        new_page_form.visible = False
         new_page_status.value = ""
-        page.update()
+        sidebar.update()
 
     def do_create_page():
         name = new_name_field.value.strip()
         title = new_title_field.value.strip()
         folder = new_folder_field.value.strip() if new_folder_field.value.strip() else None
         if not name:
-            new_page_status.value = "File name is required"
-            new_page_status.color = RED
-            new_page_overlay.update()
+            new_page_status.value = "Name required"
+            sidebar.update()
             return
         if not name.endswith(".md"):
             name += ".md"
         path, err = create_page(DEFAULTS["content"], name, title, folder)
         if err:
             new_page_status.value = err
-            new_page_status.color = RED
-            new_page_overlay.update()
+            sidebar.update()
             return
         hide_new_page()
         file_tree.reload(DEFAULTS["content"])
@@ -534,12 +520,18 @@ def main(page: ft.Page):
         new_title_field.value = ""
         new_folder_field.value = ""
         new_page_status.value = ""
-        new_page_overlay.visible = True
-        page.update()
+        new_page_form.visible = True
+        sidebar.update()
 
     def on_delete_page(path):
         delete_page(path)
         file_tree.reload(DEFAULTS["content"])
+        try:
+            refresh_page_list()
+        except Exception:
+            pass
+        sidebar.update()
+        toast("Page deleted", YELLOW)
         try:
             refresh_page_list()
         except Exception:
@@ -623,6 +615,7 @@ def main(page: ft.Page):
                     ),
                     padding=ft.padding.symmetric(horizontal=12, vertical=4),
                 ),
+                new_page_form,
                 pages_list,
                 ft.Container(height=8),
                 ft.Container(
@@ -1368,21 +1361,9 @@ a {{ color: var(--primary); }}
                 ft.Divider(color=BORDER, height=1),
                 ft.Stack(
                     [
-                        ft.Column(
-                            [
-                                ft.Stack(
-                                    [
-                                        editor_tab_content,
-                                        themes_tab_content,
-                                        settings_tab_content,
-                                    ],
-                                    expand=True,
-                                ),
-                            ],
-                            spacing=0,
-                            expand=True,
-                        ),
-                        new_page_overlay,
+                        editor_tab_content,
+                        themes_tab_content,
+                        settings_tab_content,
                     ],
                     expand=True,
                 ),
