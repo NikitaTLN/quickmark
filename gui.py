@@ -842,7 +842,7 @@ def main(page: ft.Page):
         focused_border_color=ACCENT,
         content_padding=12,
         text_size=13,
-        on_change=lambda e: on_preloaded_theme(e),
+        on_select=lambda e: on_preloaded_theme(e),
     )
 
     def on_preloaded_theme(e):
