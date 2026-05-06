@@ -4,7 +4,6 @@ import tempfile
 import threading
 import http.server
 import socketserver
-import webbrowser
 from pathlib import Path
 
 import flet as ft
@@ -409,19 +408,25 @@ def main(page: ft.Page):
 
         threading.Thread(target=run, daemon=True).start()
 
+    site_preview_url = ft.Text("", size=12, color=ACCENT, selectable=True)
+
     def on_preview(e):
         output = DEFAULTS["output"]
         if not output or not os.path.exists(output):
             log("Error: output directory does not exist. Build first.")
             return
 
-        log("Preview on http://localhost:8888")
-
         def serve():
             os.chdir(output)
-            with socketserver.TCPServer(("", 8888), http.server.SimpleHTTPRequestHandler) as httpd:
-                log("Serving at http://localhost:8888")
-                httpd.serve_forever()
+            for port in [8888, 8887, 8886, 8885]:
+                try:
+                    httpd = socketserver.TCPServer(("", port), http.server.SimpleHTTPRequestHandler)
+                    log(f"Serving at http://localhost:{port}")
+                    site_preview_url.value = f"Open: http://localhost:{port}"
+                    site_preview_url.update()
+                    httpd.serve_forever()
+                except OSError:
+                    continue
 
         threading.Thread(target=serve, daemon=True).start()
 
@@ -731,18 +736,49 @@ def main(page: ft.Page):
         expand=True,
     )
 
-    preview_btn = ft.OutlinedButton(
-        "Open in Browser",
-        icon=Icons.OPEN_IN_BROWSER,
+    preview_link = ft.TextButton(
+        "Open preview",
+        icon=ft.Icon(Icons.OPEN_IN_BROWSER, size=14, color=ACCENT),
         visible=False,
-        on_click=lambda e: open_preview_browser(),
+        url="",
+        style=ft.ButtonStyle(color=ACCENT, padding=0),
     )
 
-    preview_info = ft.Text("", size=11, color=DIM)
+    preview_status = ft.Text("", size=11, color=DIM)
 
-    def open_preview_browser():
-        if os.path.exists(temp_preview_path):
-            webbrowser.open(f"file://{temp_preview_path}")
+    preview_server_lock = threading.Lock()
+    preview_server_ready = threading.Event()
+
+    class PreviewHandler(http.server.SimpleHTTPRequestHandler):
+        def do_GET(self):
+            if self.path == "/":
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.end_headers()
+                if os.path.exists(preview_file_path):
+                    with open(preview_file_path, "rb") as f:
+                        self.wfile.write(f.read())
+                else:
+                    self.wfile.write(b"<h1>No preview available</h1>")
+            else:
+                self.send_response(404)
+                self.end_headers()
+
+        def log_message(self, format, *args):
+            pass
+
+    def start_preview_server():
+        with preview_server_lock:
+            try:
+                httpd = socketserver.TCPServer(("", 8889), PreviewHandler)
+                preview_server_ready.set()
+                httpd.serve_forever()
+            except OSError:
+                preview_server_ready.set()
+
+    threading.Thread(target=start_preview_server, daemon=True).start()
+
+    preview_file_path = os.path.join(tempfile.gettempdir(), "quickmark_preview.html")
 
     def update_preview(css):
         base_css = open(os.path.join(DEFAULTS["static"], "styles.css"), "r", encoding="utf-8").read()
@@ -767,20 +803,19 @@ def main(page: ft.Page):
 </div>
 </body>
 </html>"""
-        global temp_preview_path
-        temp_preview_path = os.path.join(tempfile.gettempdir(), "quickmark_preview.html")
-        with open(temp_preview_path, "w", encoding="utf-8") as f:
+        with open(preview_file_path, "w", encoding="utf-8") as f:
             f.write(html)
+        preview_link.url = "http://localhost:8889/"
+        preview_link.visible = True
+        preview_status.value = "Ready - click the link to view"
         preview_container.content = ft.Column([
             ft.Row([
                 ft.Icon(Icons.CHECK_CIRCLE, size=20, color=GREEN),
                 ft.Text("Preview ready", size=13, color=TEXT, weight="bold"),
             ]),
-            preview_btn,
-            preview_info,
+            preview_link,
+            preview_status,
         ], spacing=8)
-        preview_btn.visible = True
-        preview_info.value = f"File: {temp_preview_path}"
         preview_container.update()
 
     theme_dropdown = ft.Dropdown(
@@ -1023,7 +1058,9 @@ a {{ color: var(--primary); }}
                     ft.Container(width=8),
                     ft.OutlinedButton("Preview Server", icon=Icons.LANGUAGE, on_click=on_preview, expand=True),
                 ]),
-                ft.Container(height=16),
+                ft.Container(height=8),
+                site_preview_url,
+                ft.Container(height=8),
                 output_log,
             ],
             spacing=0,
