@@ -403,13 +403,8 @@ def main(page: ft.Page):
         if not base_path.endswith("/"):
             base_path = base_path + "/"
 
-        if editor.is_dirty():
+        if editor.current_file:
             editor.save()
-            status_text.value = "Saved before build"
-            status_text.color = YELLOW
-            dirty_badge.visible = False
-            dirty_badge.update()
-            status_text.update()
 
         def run():
             try:
