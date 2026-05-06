@@ -490,7 +490,7 @@ def main(page: ft.Page):
             border=ft.border.all(1, BORDER),
         ),
         visible=False,
-        alignment=ft.alignment.center,
+        alignment="center",
         bgcolor="rgba(0,0,0,0.4)",
         expand=True,
         on_click=lambda e: hide_new_page(),
