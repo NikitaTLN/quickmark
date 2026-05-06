@@ -247,14 +247,18 @@ def main(page: ft.Page):
         output_log.value += msg + "\n"
         output_log.update()
 
+    def toast(msg, color=GREEN):
+        page.snack_bar = ft.SnackBar(ft.Text(msg), bgcolor=color, duration=2000)
+        page.open(page.snack_bar)
+
     def on_save(e):
         if editor.save():
             status_text.value = f"Saved: {Path(editor.current_file).name}"
             status_text.color = GREEN
             status_text.update()
-            page.show_snack_bar(ft.SnackBar(ft.Text("File saved!"), bgcolor=GREEN, duration=1500))
+            toast("File saved!")
         else:
-            page.show_snack_bar(ft.SnackBar(ft.Text("No file open"), bgcolor=YELLOW, duration=1500))
+            toast("No file open", YELLOW)
 
     def on_generate(e):
         output_log.value = ""
@@ -283,10 +287,10 @@ def main(page: ft.Page):
                     base_path,
                 )
                 log("Done!")
-                page.show_snack_bar(ft.SnackBar(ft.Text("Site generated!"), bgcolor=GREEN, duration=2000))
+                toast("Site generated!")
             except Exception as exc:
                 log(f"Error: {str(exc)}")
-                page.show_snack_bar(ft.SnackBar(ft.Text(f"Failed: {str(exc)}"), bgcolor=RED, duration=3000))
+                toast(f"Failed: {str(exc)}", RED)
 
         threading.Thread(target=run, daemon=True).start()
 
@@ -315,7 +319,7 @@ def main(page: ft.Page):
                 name += ".md"
             path = os.path.join(DEFAULTS["content"], name)
             if os.path.exists(path):
-                page.show_snack_bar(ft.SnackBar(ft.Text("File already exists"), bgcolor=RED, duration=2000))
+                toast("File already exists", RED)
                 return
             with open(path, "w", encoding="utf-8") as f:
                 f.write(f"# {name.replace('.md', '')}\n\n")
@@ -543,7 +547,18 @@ def main(page: ft.Page):
     themes_card = ft.Container(
         content=ft.Column(
             [
-                ft.Text("AI Theme Studio", size=13, color=MUTED, weight="bold"),
+                ft.Row(
+                    [
+                        ft.Text("AI Theme Studio", size=13, color=MUTED, weight="bold", expand=True),
+                        ft.TextButton(
+                            "Get free API key →",
+                            url="https://console.groq.com/keys",
+                            style=ft.ButtonStyle(color=ACCENT, padding=0),
+                            icon=ft.Icon(Icons.OPEN_IN_NEW, size=12, color=ACCENT),
+                        ),
+                    ],
+                    spacing=0,
+                ),
                 api_key_field,
                 ft.Container(height=8),
                 ai_prompt,
