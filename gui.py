@@ -328,7 +328,7 @@ def main(page: ft.Page):
             editor.open_file(path)
             do_select_file(path)
             sidebar.update()
-            page.close_dialog()
+            close_dialog()
 
         new_name_field = ft.TextField(
             label="File name",
@@ -346,12 +346,18 @@ def main(page: ft.Page):
             title=ft.Text("New File"),
             content=ft.Column([new_name_field], tight=True, spacing=12),
             actions=[
-                ft.TextButton("Cancel", on_click=lambda e: page.close_dialog()),
+                ft.TextButton("Cancel", on_click=lambda e: close_dialog()),
                 ft.FilledButton("Create", on_click=do_create),
             ],
             actions_alignment=ft.MainAxisAlignment.END,
         )
-        page.open(page.dialog)
+        page.dialog.open = True
+        page.update()
+
+    def close_dialog():
+        if page.dialog:
+            page.dialog.open = False
+            page.update()
 
     def open_folder(_):
         if sys.platform == "win32":
