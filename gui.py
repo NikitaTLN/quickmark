@@ -12,7 +12,7 @@ Icons = ft.icons.Icons
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "src"))
 
 from main import generate_site
-from ai_themes import generate_theme, apply_theme, PRELOADED_THEMES, test_api_key
+from ai_themes import generate_theme, apply_theme, PRELOADED_THEMES, test_api_key, detect_provider
 
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 DEFAULTS = {
@@ -40,6 +40,24 @@ YELLOW = "#d29922"
 BLUE = "#58a6ff"
 
 FONT_MONO = "Cascadia Code, Fira Code, Consolas, monospace"
+
+SIDEBAR_W = 260
+RIGHT_PANEL_W = 290
+
+
+def make_input(**kwargs):
+    defaults = {
+        "border_radius": 8,
+        "filled": True,
+        "bgcolor": INPUT_BG,
+        "color": TEXT,
+        "border_color": "transparent",
+        "focused_border_color": ACCENT,
+        "cursor_color": ACCENT,
+        "text_size": 13,
+    }
+    defaults.update(kwargs)
+    return ft.TextField(**defaults)
 
 
 class FileTree:
@@ -167,7 +185,7 @@ class Editor:
 
 
 def main(page: ft.Page):
-    page.title = "Quickmark — Static Site Generator"
+    page.title = "Quickmark - Static Site Generator"
     page.theme_mode = ft.ThemeMode.DARK
     page.bgcolor = SURFACE
     page.padding = 0
@@ -180,21 +198,14 @@ def main(page: ft.Page):
     file_tree = FileTree(on_select=None)
 
     status_text = ft.Text("Select a file to edit", size=12, color=MUTED)
+    dirty_badge = ft.Container(
+        content=ft.Text("", size=11, color=YELLOW),
+        visible=False,
+        padding=ft.padding.only(right=8),
+    )
 
     fields = {
-        "base_path": ft.TextField(
-            label="Base Path",
-            value=DEFAULTS["base_path"],
-            border_radius=8,
-            filled=True,
-            bgcolor=INPUT_BG,
-            color=TEXT,
-            border_color="transparent",
-            focused_border_color=ACCENT,
-            cursor_color=ACCENT,
-            height=44,
-            text_size=13,
-        )
+        "base_path": make_input(label="Base Path", value=DEFAULTS["base_path"])
     }
 
     def _on_mode_change(e):
@@ -231,7 +242,7 @@ def main(page: ft.Page):
         bgcolor=INPUT_BG,
         color=MUTED,
         border_color="transparent",
-        height=100,
+        expand=True,
         text_size=12,
     )
 
@@ -239,6 +250,8 @@ def main(page: ft.Page):
         editor.open_file(path)
         status_text.value = f"Editing: {Path(path).name}"
         status_text.color = TEXT
+        dirty_badge.visible = False
+        dirty_badge.update()
         status_text.update()
 
     file_tree.on_select = do_select_file
@@ -256,7 +269,9 @@ def main(page: ft.Page):
         if editor.save():
             status_text.value = f"Saved: {Path(editor.current_file).name}"
             status_text.color = GREEN
+            dirty_badge.visible = False
             status_text.update()
+            dirty_badge.update()
             toast("File saved!")
         else:
             toast("No file open", YELLOW)
@@ -275,6 +290,8 @@ def main(page: ft.Page):
             editor.save()
             status_text.value = "Saved before build"
             status_text.color = YELLOW
+            dirty_badge.visible = False
+            dirty_badge.update()
             status_text.update()
 
         def run():
@@ -330,17 +347,7 @@ def main(page: ft.Page):
             sidebar.update()
             close_dialog()
 
-        new_name_field = ft.TextField(
-            label="File name",
-            value="untitled.md",
-            border_radius=8,
-            filled=True,
-            bgcolor=INPUT_BG,
-            color=TEXT,
-            border_color="transparent",
-            focused_border_color=ACCENT,
-            cursor_color=ACCENT,
-        )
+        new_name_field = make_input(label="File name", value="untitled.md")
 
         page.dialog = ft.AlertDialog(
             title=ft.Text("New File"),
@@ -401,7 +408,7 @@ def main(page: ft.Page):
                     padding=ft.padding.symmetric(horizontal=12, vertical=4),
                 ),
                 file_tree.build(DEFAULTS["content"]),
-                ft.Container(height=4),
+                ft.Container(expand=True),
                 ft.Divider(color=BORDER, height=1),
                 ft.Container(height=4),
                 ft.Container(
@@ -425,9 +432,9 @@ def main(page: ft.Page):
             ],
             spacing=0,
         ),
-        width=260,
+        width=SIDEBAR_W,
         bgcolor=SIDEBAR,
-        border=ft.border.all(1, BORDER),
+        border=ft.border.only(right=ft.border.BorderSide(1, BORDER)),
     )
 
     # -- Editor area --
@@ -437,6 +444,7 @@ def main(page: ft.Page):
                 ft.Container(
                     content=ft.Row(
                         [
+                            dirty_badge,
                             status_text,
                             ft.Container(expand=True),
                             ft.Row(
@@ -466,23 +474,31 @@ def main(page: ft.Page):
     )
 
     # -- Right panel --
-    api_key_field = ft.TextField(
-        label="Groq API Key",
-        border_radius=8,
-        filled=True,
-        bgcolor=INPUT_BG,
-        color=TEXT,
-        border_color="transparent",
-        focused_border_color=ACCENT,
-        cursor_color=ACCENT,
-        height=44,
-        text_size=13,
+    provider_label = ft.Text("", size=11, color=ACCENT)
+
+    api_key_field = make_input(
+        label="AI API Key (Groq or OpenRouter)",
         password=True,
         can_reveal_password=True,
+        on_change=lambda e: _update_provider(),
     )
 
+    def _update_provider():
+        key = api_key_field.value.strip()
+        provider = detect_provider(key)
+        if provider == "groq":
+            provider_label.value = "Groq (llama-3.1-8b-instant)"
+            provider_label.color = GREEN
+        elif provider == "openrouter":
+            provider_label.value = "OpenRouter (llama-3.1-8b-instruct)"
+            provider_label.color = BLUE
+        else:
+            provider_label.value = "Unrecognized key format" if key else ""
+            provider_label.color = RED if key else MUTED
+        right_panel.update()
+
     ai_prompt = ft.TextField(
-        label="Describe the vibe (e.g., 'Cyberpunk city style')",
+        label="Describe the vibe",
         multiline=True,
         min_lines=2,
         max_lines=3,
@@ -521,12 +537,12 @@ def main(page: ft.Page):
     def on_generate_theme(e):
         key = api_key_field.value.strip().replace('"', '').replace("'", "")
         if not key:
-            ai_status.value = "Please enter your Groq API key"
+            ai_status.value = "Please enter your API key"
             ai_status.color = RED
             right_panel.update()
             return
 
-        ai_status.value = "✨ Generating... (this may take 10-20s)"
+        ai_status.value = "Generating... (may take 10-20s)"
         ai_status.color = BLUE
         right_panel.update()
 
@@ -534,7 +550,7 @@ def main(page: ft.Page):
             try:
                 css = generate_theme(ai_prompt.value or "Modern, beautiful, animated dark theme", DEFAULTS["content"], key)
                 apply_theme("ai-theme", css, DEFAULTS["static"])
-                ai_status.value = "✨ Theme applied! Rebuild site to see."
+                ai_status.value = "Theme applied! Rebuild to preview."
                 ai_status.color = GREEN
                 on_generate(e)
             except Exception as exc:
@@ -563,116 +579,147 @@ def main(page: ft.Page):
         border_color="transparent",
         focused_border_color=ACCENT,
         content_padding=12,
-        height=44,
         text_size=13,
         on_select=on_preloaded_theme,
     )
+
+    tab_line = ft.Container(height=2, bgcolor=ACCENT, border_radius=1)
+    settings_tab_btn = ft.Container(
+        content=ft.Text("Settings", size=13, color=ACCENT, weight="bold"),
+        padding=ft.padding.symmetric(horizontal=16, vertical=8),
+        on_click=lambda e: switch_tab(0),
+        data=0,
+    )
+    themes_tab_btn = ft.Container(
+        content=ft.Text("Themes", size=13, color=MUTED, weight="bold"),
+        padding=ft.padding.symmetric(horizontal=16, vertical=8),
+        on_click=lambda e: switch_tab(1),
+        data=1,
+    )
+
+    tab_bar = ft.Container(
+        content=ft.Column([
+            ft.Row(
+                [
+                    settings_tab_btn,
+                    themes_tab_btn,
+                    ft.Container(expand=True),
+                ],
+                spacing=0,
+            ),
+            tab_line,
+        ],
+        spacing=0,
+        ),
+        margin=ft.margin.only(left=-16, right=-16, top=-16, bottom=8),
+    )
+
+    def switch_tab(idx):
+        settings_card.visible = idx == 0
+        themes_card.visible = idx == 1
+        if idx == 0:
+            settings_tab_btn.content.color = ACCENT
+            themes_tab_btn.content.color = MUTED
+            tab_line.parent.controls[0].controls[0] = settings_tab_btn
+        else:
+            themes_tab_btn.content.color = ACCENT
+            settings_tab_btn.content.color = MUTED
+        right_panel.update()
 
     themes_card = ft.Container(
         content=ft.Column(
             [
                 ft.Row(
                     [
-                        ft.Text("AI Theme Studio", size=13, color=MUTED, weight="bold", expand=True),
+                        ft.Text("AI Theme Studio", size=13, color=MUTED, weight="bold"),
+                        ft.Container(expand=True),
                         ft.TextButton(
-                            "Get free API key →",
+                            "Groq",
                             url="https://console.groq.com/keys",
+                            style=ft.ButtonStyle(color=ACCENT, padding=0),
+                            icon=ft.Icon(Icons.OPEN_IN_NEW, size=12, color=ACCENT),
+                        ),
+                        ft.Container(width=4),
+                        ft.TextButton(
+                            "OpenRouter",
+                            url="https://openrouter.ai/settings/keys",
                             style=ft.ButtonStyle(color=ACCENT, padding=0),
                             icon=ft.Icon(Icons.OPEN_IN_NEW, size=12, color=ACCENT),
                         ),
                     ],
                     spacing=0,
                 ),
+                ft.Container(height=8),
                 api_key_field,
                 ft.Container(height=4),
-                ai_prompt,
+                provider_label,
                 ft.Container(height=8),
+                ai_prompt,
+                ft.Container(height=10),
                 ft.Row(
                     [
                         ft.FilledButton(
-                            "✨ Generate Theme",
+                            "Generate Theme",
                             icon=Icons.AUTO_AWESOME,
                             on_click=on_generate_theme,
-                            height=40,
-                            expand=2,
+                            expand=True,
                         ),
-                        ft.Container(width=8),
+                        ft.Container(width=6),
                         ft.OutlinedButton(
                             "Test Key",
                             icon=Icons.CHECK,
                             on_click=on_test_key,
-                            height=40,
-                            expand=1,
+                            expand=True,
                         ),
                     ],
                     spacing=0,
                 ),
-                ft.Container(height=4),
-                ft.Container(height=4),
+                ft.Container(height=8),
                 ai_status,
-                ft.Container(height=12),
+                ft.Container(height=16),
                 ft.Divider(color=BORDER, height=1),
                 ft.Container(height=12),
                 theme_dropdown,
             ],
-            spacing=6,
+            spacing=0,
         ),
-        padding=16,
-        border_radius=8,
-        bgcolor=CARD,
+        expand=True,
     )
 
     settings_card = ft.Container(
         content=ft.Column(
             [
-                ft.Text("Settings", size=13, color=MUTED, weight="bold"),
-                mode_toggle,
-                ft.Container(height=4),
-                fields["base_path"],
+                ft.Text("Deployment", size=13, color=MUTED, weight="bold"),
                 ft.Container(height=8),
+                mode_toggle,
+                ft.Container(height=10),
+                fields["base_path"],
+                ft.Container(height=12),
                 ft.Row(
                     [
                         ft.FilledButton(
                             "Generate",
                             icon=Icons.PLAY_ARROW,
                             on_click=on_generate,
-                            height=40,
+                            expand=True,
                         ),
+                        ft.Container(width=6),
                         ft.OutlinedButton(
                             "Preview",
                             icon=Icons.LANGUAGE,
                             on_click=on_preview,
-                            height=40,
+                            expand=True,
                         ),
                     ],
-                    spacing=8,
+                    spacing=0,
                 ),
-                ft.Container(height=8),
+                ft.Container(height=12),
                 output_log,
-            ],
-            spacing=6,
-        ),
-        padding=16,
-        border_radius=8,
-        bgcolor=CARD,
-    )
-
-    tab_buttons = ft.Container(
-        content=ft.Row(
-            [
-                ft.TextButton("Settings", on_click=lambda e: switch_tab(0), data=0, style=ft.ButtonStyle(color=ACCENT)),
-                ft.TextButton("Themes", on_click=lambda e: switch_tab(1), data=1),
             ],
             spacing=0,
         ),
+        expand=True,
     )
-
-    def switch_tab(idx):
-        settings_card.visible = idx == 0
-        themes_card.visible = idx == 1
-        for btn in tab_buttons.content.controls:
-            btn.style = ft.ButtonStyle(color=ACCENT if btn.data == idx else MUTED)
-        right_panel.update()
 
     settings_card.visible = True
     themes_card.visible = False
@@ -680,16 +727,26 @@ def main(page: ft.Page):
     right_panel = ft.Container(
         content=ft.Column(
             [
-                tab_buttons,
-                settings_card,
-                themes_card,
+                tab_bar,
+                ft.Container(
+                    content=ft.Column(
+                        [
+                            settings_card,
+                            themes_card,
+                        ],
+                        spacing=0,
+                        scroll=ft.ScrollMode.AUTO,
+                        expand=True,
+                    ),
+                    padding=ft.padding.symmetric(horizontal=16, vertical=4),
+                    expand=True,
+                ),
             ],
-            scroll=ft.ScrollMode.AUTO,
+            spacing=0,
         ),
-        width=280,
+        width=RIGHT_PANEL_W,
         bgcolor=SIDEBAR,
-        border=ft.border.all(1, BORDER),
-        padding=12,
+        border=ft.border.only(left=ft.border.BorderSide(1, BORDER)),
     )
 
     # -- Main layout --

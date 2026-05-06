@@ -1,48 +1,103 @@
+* {
+  box-sizing: border-box;
+}
+html {
+  font-size: 100%;
+  -webkit-text-size-adjust: 100%;
+}
 body {
-  font-family: SF Pro, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', SF Pro, sans-serif;
   line-height: 1.6;
   background-color: #1f1f23;
-  max-width: 600px;
+  margin: 0;
+  padding: 20px 24px;
+  width: 100%;
+  min-height: 100vh;
+}
+.page-container {
+  max-width: 900px;
   margin: 0 auto;
-  padding: 20px;
+  width: 100%;
+  padding: 0;
+}
+.top-nav {
+  display: flex;
+  gap: 8px;
+  padding: 12px 0;
+  margin-bottom: 24px;
+  border-bottom: 1px solid #30363d;
+  flex-wrap: wrap;
+}
+.nav-link {
+  color: #8b949e;
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 500;
+  padding: 6px 14px;
+  border-radius: 6px;
+  transition: background-color 0.15s, color 0.15s;
+  word-break: normal;
+}
+.nav-link:hover {
+  background-color: #30363d;
+  color: #e6edf3;
+  text-decoration: none;
 }
 h1 {
   color: #ffffff;
   margin-top: 0;
   margin-bottom: 20px;
+  font-size: clamp(1.6rem, 4vw, 2.4rem);
+  line-height: 1.25;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 h2 {
   color: #818cf8;
   margin-top: 32px;
   margin-bottom: 16px;
+  font-size: clamp(1.3rem, 3vw, 1.8rem);
+  line-height: 1.3;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 h3 {
   color: #a5b4fc;
   margin-top: 28px;
   margin-bottom: 14px;
+  font-size: clamp(1.1rem, 2.5vw, 1.4rem);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 h4 {
   color: #c7d2fe;
   margin-top: 24px;
   margin-bottom: 12px;
+  font-size: clamp(1rem, 2vw, 1.2rem);
 }
 h5 {
   color: #e0e7ff;
   margin-top: 20px;
   margin-bottom: 10px;
+  font-size: 1.05rem;
 }
 h6 {
   color: #c0c0c8;
   margin-top: 20px;
   margin-bottom: 10px;
+  font-size: 0.95rem;
 }
 p {
   color: #c9d1d9;
   margin-bottom: 20px;
+  font-size: clamp(0.95rem, 1.5vw, 1.05rem);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 a {
   color: #6568ff;
   text-decoration: none;
+  word-break: break-all;
 }
 a:hover {
   color: #818cf8;
@@ -54,6 +109,8 @@ code {
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 0.9em;
+  word-break: break-all;
+  overflow-wrap: break-word;
 }
 pre {
   background-color: #2d2d36;
@@ -67,6 +124,8 @@ pre code {
   background-color: transparent;
   color: #c9d1d9;
   padding: 0;
+  word-break: normal;
+  overflow-wrap: normal;
 }
 blockquote {
   border-left: 4px solid #6568ff;
@@ -84,6 +143,8 @@ ul, ol {
 }
 li {
   margin-bottom: 6px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 li::marker {
   color: #6568ff;
@@ -98,4 +159,27 @@ hr {
   border: none;
   border-top: 1px solid #3d3d48;
   margin: 24px 0;
+}
+@media (max-width: 768px) {
+  body {
+    padding: 16px 12px;
+  }
+  .page-container {
+    padding: 0;
+  }
+  pre {
+    padding: 12px;
+    font-size: 0.85em;
+  }
+  blockquote {
+    padding: 10px 12px;
+  }
+}
+@media (max-width: 480px) {
+  body {
+    padding: 12px 8px;
+  }
+  h1 { margin-bottom: 14px; }
+  h2 { margin-top: 24px; }
+  pre { padding: 10px; font-size: 0.8em; border-radius: 6px; }
 }
