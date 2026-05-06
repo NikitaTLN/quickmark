@@ -12,6 +12,7 @@ Icons = ft.icons.Icons
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "src"))
 
 from main import generate_site
+from ai_themes import generate_theme, apply_theme, PRELOADED_THEMES
 
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 DEFAULTS = {
@@ -453,6 +454,118 @@ def main(page: ft.Page):
     )
 
     # -- Right panel --
+    api_key_field = ft.TextField(
+        label="Groq API Key",
+        border_radius=8,
+        filled=True,
+        bgcolor=INPUT_BG,
+        color=TEXT,
+        border_color="transparent",
+        focused_border_color=ACCENT,
+        cursor_color=ACCENT,
+        height=44,
+        text_size=13,
+        password=True,
+        can_reveal_password=True,
+    )
+
+    ai_prompt = ft.TextField(
+        label="Describe the vibe (e.g., 'Cyberpunk city style')",
+        multiline=True,
+        min_lines=2,
+        max_lines=3,
+        border_radius=8,
+        filled=True,
+        bgcolor=INPUT_BG,
+        color=TEXT,
+        border_color="transparent",
+        focused_border_color=ACCENT,
+        cursor_color=ACCENT,
+        text_size=13,
+    )
+
+    ai_status = ft.Text("", size=12, color=MUTED)
+
+    def on_generate_theme(e):
+        key = api_key_field.value.strip()
+        if not key:
+            ai_status.value = "Please enter your Groq API key"
+            ai_status.color = RED
+            right_panel.update()
+            return
+
+        ai_status.value = "✨ Generating..."
+        ai_status.color = BLUE
+        right_panel.update()
+
+        async def run_gen():
+            try:
+                css = await generate_theme(ai_prompt.value, DEFAULTS["content"], key)
+                apply_theme("ai-theme", css, DEFAULTS["static"])
+                ai_status.value = "Theme applied! Rebuild site to see."
+                ai_status.color = GREEN
+                on_generate(e)
+            except Exception as exc:
+                ai_status.value = f"Error: {str(exc)}"
+                ai_status.color = RED
+            right_panel.update()
+
+        import asyncio
+        asyncio.get_event_loop().run_until_complete(run_gen())
+
+    def on_preloaded_theme(e):
+        name = theme_dropdown.value
+        css = PRELOADED_THEMES.get(name, "")
+        apply_theme(name, css, DEFAULTS["static"])
+        ai_status.value = f"Applied: {name}"
+        ai_status.color = GREEN
+        on_generate(e)
+        right_panel.update()
+
+    theme_dropdown = ft.Dropdown(
+        label="Quick Themes",
+        options=[ft.dropdown.Option(name) for name in PRELOADED_THEMES.keys()],
+        border_radius=8,
+        filled=True,
+        bgcolor=INPUT_BG,
+        color=TEXT,
+        border_color="transparent",
+        focused_border_color=ACCENT,
+        content_padding=12,
+        height=44,
+        text_size=13,
+        on_select=on_preloaded_theme,
+    )
+
+    themes_card = ft.Container(
+        content=ft.Column(
+            [
+                ft.Text("AI Theme Studio", size=13, color=MUTED, weight="bold"),
+                api_key_field,
+                ft.Container(height=8),
+                ai_prompt,
+                ft.Container(height=8),
+                ft.FilledButton(
+                    "✨ Generate Theme",
+                    icon=Icons.AUTO_AWESOME,
+                    on_click=on_generate_theme,
+                    height=40,
+                    expand=True,
+                ),
+                ft.Container(height=4),
+                ai_status,
+                ft.Container(height=12),
+                ft.Divider(color=BORDER, height=1),
+                ft.Container(height=12),
+                theme_dropdown,
+            ],
+            spacing=6,
+        ),
+        padding=16,
+        border_radius=8,
+        bgcolor=CARD,
+    )
+
     settings_card = ft.Container(
         content=ft.Column(
             [
@@ -488,10 +601,19 @@ def main(page: ft.Page):
         bgcolor=CARD,
     )
 
+    right_tabs = ft.Tabs(
+        selected_index=0,
+        tabs=[
+            ft.Tab(label="Settings", content=settings_card),
+            ft.Tab(label="Themes", content=themes_card),
+        ],
+        expand=True,
+    )
+
     right_panel = ft.Container(
         content=ft.Column(
             [
-                settings_card,
+                right_tabs,
             ],
             scroll=ft.ScrollMode.AUTO,
         ),
