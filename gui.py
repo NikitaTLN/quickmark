@@ -708,8 +708,9 @@ def main(page: ft.Page):
 
         page.bgcolor = bg
         sidebar.bgcolor = surface
+        themes_right.bgcolor = card_bg
 
-        for c in [main_tab_bar, editor_tab_content, themes_tab_content, settings_tab_content, center_area]:
+        for c in [main_tab_bar, editor_tab_content, themes_tab_content, settings_tab_content, center_area, editor_header]:
             try:
                 c.bgcolor = card_bg
             except Exception:
@@ -723,6 +724,8 @@ def main(page: ft.Page):
         theme_switcher_status.value = f"Applied: {name}"
         theme_switcher_status.color = accent
 
+        switch_main_tab._theme_colors = (text, muted, primary, card_bg)
+        switch_main_tab(0 if editor_tab_content.visible else (1 if themes_tab_content.visible else 2))
         page.update()
 
     # -- Main tab bar --
@@ -1302,14 +1305,17 @@ a {{ color: var(--primary); }}
         else:
             toast("Enter a URL first", YELLOW)
 
+    switch_main_tab._theme_colors = (TEXT, MUTED, ACCENT, CARD)
+
     def switch_main_tab(idx):
         editor_tab_content.visible = idx == 0
         themes_tab_content.visible = idx == 1
         settings_tab_content.visible = idx == 2
 
+        text, muted, accent, card = switch_main_tab._theme_colors
         for btn, i in [(editor_tab_btn, 0), (themes_tab_btn, 1), (settings_tab_btn, 2)]:
-            btn.content.color = TEXT if i == idx else MUTED
-            btn.bgcolor = ACCENT if i == idx else None
+            btn.content.color = text if i == idx else muted
+            btn.bgcolor = accent if i == idx else None
 
         center_area.update()
 
