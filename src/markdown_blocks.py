@@ -73,18 +73,28 @@ def block_to_block_type_html(block):
 
 
 def text_to_heading(block):
-    match = re.match(r'^(#{1,6})\s(.*)', block.split("\n")[0])
+    lines = block.split("\n")
+    match = re.match(r'^(#{1,6})\s(.*)', lines[0])
     if not match:
         raise ValueError("Invalid heading")
 
     level = len(match.group(1))
-    content = match.group(2)
+    heading_content = match.group(2)
     tag = f"h{level}"
 
-    text_nodes = text_to_textnodes(content)
+    text_nodes = text_to_textnodes(heading_content)
     children = [text_node_to_html_node(node) for node in text_nodes]
 
-    return ParentNode(tag, children)
+    heading_node = ParentNode(tag, children)
+
+    if len(lines) > 1:
+        remaining = "\n".join(lines[1:])
+        if remaining.strip():
+            p_nodes = text_to_textnodes(remaining)
+            p_children = [text_node_to_html_node(node) for node in p_nodes]
+            return ParentNode("div", [heading_node, ParentNode("p", p_children)])
+
+    return heading_node
 
 
 def text_to_paragraph(block):
