@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 import tempfile
 import threading
@@ -650,17 +651,33 @@ def main(page: ft.Page):
     # -- Theme switcher in top bar --
     theme_switcher_status = ft.Text("", size=11, color=GREEN)
 
+    def parse_theme_css(css):
+        match = re.search(r":root\s*\{([^}]+)\}", css)
+        if not match:
+            return None
+        colors = {}
+        for pair in match.group(1).split(";"):
+            pair = pair.strip()
+            if ":" in pair:
+                var, val = pair.split(":", 1)
+                var = var.strip().strip("--").strip()
+                val = val.strip()
+                colors[var] = val
+        return colors
+
     GUI_THEMES = {}
     for name, css in PRELOADED_THEMES.items():
-        for mp_name, mp in MOOD_PALETTES.items():
-            if mp["bg"] in css:
-                GUI_THEMES[name] = mp
-                break
-    if not GUI_THEMES:
-        GUI_THEMES = MOOD_PALETTES
+        colors = parse_theme_css(css)
+        if colors and "bg" in colors:
+            GUI_THEMES[name] = colors
+
+    if "Default" not in GUI_THEMES:
+        GUI_THEMES["Default"] = {"bg": SURFACE, "surface": SIDEBAR, "text": TEXT, "primary": ACCENT, "accent": GREEN, "muted": MUTED}
+
+    ordered_names = ["Default"] + [n for n in GUI_THEMES if n != "Default"]
 
     theme_switcher = ft.Dropdown(
-        options=[ft.dropdown.Option(name) for name in GUI_THEMES.keys()],
+        options=[ft.dropdown.Option(name) for name in ordered_names],
         width=200,
         border_radius=6,
         filled=True,
@@ -674,27 +691,38 @@ def main(page: ft.Page):
         on_select=lambda e: on_quick_theme_switch(e),
     )
 
-    current_gui_theme = {}
-
     def on_quick_theme_switch(e):
         name = e.control.value
         if not name or name not in GUI_THEMES:
             return
         p = GUI_THEMES[name]
-        current_gui_theme.update(p)
+        bg = p.get("bg", SURFACE)
+        surface = p.get("surface", SIDEBAR)
+        text = p.get("text", TEXT)
+        primary = p.get("primary", ACCENT)
+        accent = p.get("accent", GREEN)
+        muted = p.get("muted", MUTED)
+        card_bg = _hex_adjust(surface, 8)
+        input_bg = _hex_adjust(surface, 16)
+        border_col = _hex_adjust(surface, 24)
 
-        sb = p.get("surface", p["bg"])
-        page.bgcolor = p["bg"]
-        sidebar.bgcolor = sb
-        card_bg = p["surface"]
-        input_bg = _hex_adjust(p["surface"], 10)
-        border_color = _hex_adjust(p["surface"], 20)
+        page.bgcolor = bg
+        sidebar.bgcolor = surface
+
+        for c in [main_tab_bar, editor_tab_content, themes_tab_content, settings_tab_content, center_area]:
+            try:
+                c.bgcolor = card_bg
+            except Exception:
+                pass
 
         editor.field.bgcolor = input_bg
+        editor.field.color = text
         output_log.bgcolor = input_bg
 
+        theme_switcher.bgcolor = input_bg
         theme_switcher_status.value = f"Applied: {name}"
-        theme_switcher_status.color = p["accent"]
+        theme_switcher_status.color = accent
+
         page.update()
 
     # -- Main tab bar --
