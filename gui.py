@@ -691,43 +691,6 @@ def main(page: ft.Page):
         on_select=lambda e: on_quick_theme_switch(e),
     )
 
-    def on_quick_theme_switch(e):
-        name = e.control.value
-        if not name or name not in GUI_THEMES:
-            return
-        p = GUI_THEMES[name]
-        bg = p.get("bg", SURFACE)
-        surface = p.get("surface", SIDEBAR)
-        text = p.get("text", TEXT)
-        primary = p.get("primary", ACCENT)
-        accent = p.get("accent", GREEN)
-        muted = p.get("muted", MUTED)
-        card_bg = _hex_adjust(surface, 8)
-        input_bg = _hex_adjust(surface, 16)
-        border_col = _hex_adjust(surface, 24)
-
-        page.bgcolor = bg
-        sidebar.bgcolor = surface
-        themes_right.bgcolor = card_bg
-
-        for c in [main_tab_bar, editor_tab_content, themes_tab_content, settings_tab_content, center_area, editor_header]:
-            try:
-                c.bgcolor = card_bg
-            except Exception:
-                pass
-
-        editor.field.bgcolor = input_bg
-        editor.field.color = text
-        output_log.bgcolor = input_bg
-
-        theme_switcher.bgcolor = input_bg
-        theme_switcher_status.value = f"Applied: {name}"
-        theme_switcher_status.color = accent
-
-        switch_main_tab._theme_colors = (text, muted, primary, card_bg)
-        switch_main_tab(0 if editor_tab_content.visible else (1 if themes_tab_content.visible else 2))
-        page.update()
-
     # -- Main tab bar --
     def make_tab_btn(label, idx):
         return ft.Container(
@@ -1318,6 +1281,43 @@ a {{ color: var(--primary); }}
             btn.bgcolor = accent if i == idx else None
 
         center_area.update()
+
+    def on_quick_theme_switch(e):
+        name = e.control.value
+        if not name or name not in GUI_THEMES:
+            return
+        p = GUI_THEMES[name]
+        bg = p.get("bg", SURFACE)
+        surface = p.get("surface", SIDEBAR)
+        text = p.get("text", TEXT)
+        primary = p.get("primary", ACCENT)
+        accent = p.get("accent", GREEN)
+        muted = p.get("muted", MUTED)
+        card_bg = _hex_adjust(surface, 8)
+        input_bg = _hex_adjust(surface, 16)
+        border_col = _hex_adjust(surface, 24)
+
+        page.bgcolor = bg
+        sidebar.bgcolor = surface
+        themes_right.bgcolor = card_bg
+
+        for c in [main_tab_bar, editor_tab_content, themes_tab_content, settings_tab_content, center_area, editor_header]:
+            try:
+                c.bgcolor = card_bg
+            except Exception:
+                pass
+
+        editor.field.bgcolor = input_bg
+        editor.field.color = text
+        output_log.bgcolor = input_bg
+
+        theme_switcher.bgcolor = input_bg
+        theme_switcher_status.value = f"Applied: {name}"
+        theme_switcher_status.color = accent
+
+        switch_main_tab._theme_colors = (text, muted, primary, card_bg)
+        switch_main_tab(0 if editor_tab_content.visible else (1 if themes_tab_content.visible else 2))
+        page.update()
 
     # -- Editor header bar --
     editor_header = ft.Container(
