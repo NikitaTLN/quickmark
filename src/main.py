@@ -9,13 +9,13 @@ def generate_site(content_dir, template_path, output_dir, static_dir, base_path=
         shutil.rmtree(output_dir)
     os.makedirs(output_dir)
 
-    with open(template_path, "r") as f:
+    with open(template_path, "r", encoding="utf-8") as f:
         template = f.read()
 
     md_files = get_dir_files(content_dir)
 
     for md_file in md_files:
-        with open(md_file, "r") as f:
+        with open(md_file, "r", encoding="utf-8") as f:
             markdown = f.read()
 
         relative_path = os.path.relpath(md_file, content_dir)
@@ -27,7 +27,7 @@ def generate_site(content_dir, template_path, output_dir, static_dir, base_path=
 
         html = generate_page(markdown, template, base_path)
 
-        with open(output_path, "w") as f:
+        with open(output_path, "w", encoding="utf-8") as f:
             f.write(html)
 
         print(f"Generated: {output_path}")

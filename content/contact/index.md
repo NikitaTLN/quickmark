@@ -1,15 +1,11 @@
-# Contact Me
-
-Feel free to reach out!
-
-## Email
-
-You can email me at [example@email.com](mailto:example@email.com)
-
-## Social Links
+# Контакты и социальные сети
 
 - [GitHub](https://github.com)
-- [Twitter](https://twitter.com)
-- [LinkedIn](https://linkedin.com)
+- [Instagram](https://instagram.com/nikitaljubimov_official)
 
-Go back to [home](/).
+- [Личный сайт](https://nikita.ee)
+
+- Личный Email - [nikitaljubimov@gmail.com](mailto:nikitaljubimov@gmail.com)
+- Email опекуна - [irina@adelir.com](mailto:irina@adelir.com)
+
+Обратно [на главную](/).

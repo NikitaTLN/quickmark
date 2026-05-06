@@ -19,7 +19,8 @@ DEFAULTS = {
     "static": os.path.join(PROJECT_ROOT, "static"),
     "template": os.path.join(PROJECT_ROOT, "template.html"),
     "output": os.path.join(PROJECT_ROOT, "docs"),
-    "base_path": "/quickmark/",
+    "base_path": "/",
+    "repo_name": "quickmark",
 }
 
 ACCENT = "#6568ff"
@@ -140,7 +141,7 @@ class Editor:
 
     def open_file(self, path):
         try:
-            with open(path, "r") as f:
+            with open(path, "r", encoding="utf-8") as f:
                 content = f.read()
             self.current_file = path
             self.original = content
@@ -153,7 +154,7 @@ class Editor:
 
     def save(self):
         if self.current_file:
-            with open(self.current_file, "w") as f:
+            with open(self.current_file, "w", encoding="utf-8") as f:
                 f.write(self.field.value)
             self.original = self.field.value
             return True
@@ -193,6 +194,31 @@ def main(page: ft.Page):
             text_size=13,
         )
     }
+
+    def _on_mode_change(e):
+        if "github" in e.control.selected:
+            fields["base_path"].value = f"/{DEFAULTS['repo_name']}/"
+        else:
+            fields["base_path"].value = "/"
+        fields["base_path"].update()
+
+    mode_toggle = ft.SegmentedButton(
+        selected=["local"],
+        on_change=_on_mode_change,
+        segments=[
+            ft.Segment(
+                value="local",
+                label=ft.Text("Local"),
+                icon=ft.Icon(Icons.LOCAL_BAR, size=16),
+            ),
+            ft.Segment(
+                value="github",
+                label=ft.Text("GitHub Pages"),
+                icon=ft.Icon(Icons.CLOUD, size=16),
+            ),
+        ],
+        selected_icon=None,
+    )
 
     output_log = ft.TextField(
         label="Build Output",
@@ -289,7 +315,7 @@ def main(page: ft.Page):
             if os.path.exists(path):
                 page.show_snack_bar(ft.SnackBar(ft.Text("File already exists"), bgcolor=RED, duration=2000))
                 return
-            with open(path, "w") as f:
+            with open(path, "w", encoding="utf-8") as f:
                 f.write(f"# {name.replace('.md', '')}\n\n")
             file_tree.reload(DEFAULTS["content"])
             editor.open_file(path)
@@ -431,6 +457,8 @@ def main(page: ft.Page):
         content=ft.Column(
             [
                 ft.Text("Settings", size=13, color=MUTED, weight="bold"),
+                mode_toggle,
+                ft.Container(height=4),
                 fields["base_path"],
                 ft.Container(height=8),
                 ft.Row(
