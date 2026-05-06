@@ -20,6 +20,10 @@ def get_content_context(content_dir):
                     sample += fh.read(300) + "\n---\n"
     return sample[:2000]
 
+import os
+import re
+import httpx
+
 async def generate_theme(prompt, content_dir, api_key):
     context = get_content_context(content_dir)
     user_prompt = f"Project context:\n{context}\n\nUser request: {prompt}\n\nMake it stunning."
@@ -31,13 +35,15 @@ async def generate_theme(prompt, content_dir, api_key):
             json={
                 "model": "llama-3.3-70b-versatile",
                 "messages": [
-                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "system", "content": "You are a master CSS designer. Return ONLY valid CSS."},
                     {"role": "user", "content": user_prompt},
                 ],
                 "temperature": 0.8,
             },
             timeout=30.0,
         )
+        if resp.status_code == 401:
+            raise Exception("Invalid API key. Please check https://console.groq.com/keys")
         resp.raise_for_status()
         css = resp.json()["choices"][0]["message"]["content"]
         return re.sub(r'^```css\s*|\s*```$', '', css).strip()

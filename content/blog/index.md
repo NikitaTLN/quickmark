@@ -9,7 +9,7 @@ Building a static site generator from scratch is a great way to learn about:
 1. File I/O operations
 2. Text parsing and manipulation
 3. HTML generation
-4. Template rendering
+4. Template renderin
 
 Here's some code example:
 

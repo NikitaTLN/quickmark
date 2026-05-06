@@ -248,8 +248,9 @@ def main(page: ft.Page):
         output_log.update()
 
     def toast(msg, color=GREEN):
-        page.snack_bar = ft.SnackBar(ft.Text(msg), bgcolor=color, duration=2000)
-        page.open(page.snack_bar)
+        page.snack_bar = ft.SnackBar(content=ft.Text(msg), bgcolor=color, duration=2000)
+        page.snack_bar.open = True
+        page.update()
 
     def on_save(e):
         if editor.save():
