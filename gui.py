@@ -528,7 +528,27 @@ def main(page: ft.Page):
         except Exception:
             pass
         sidebar.update()
-        toast("Page deleted", YELLOW)
+
+        base_path = fields["base_path"].value
+        if not base_path.startswith("/"):
+            base_path = "/" + base_path
+        if not base_path.endswith("/"):
+            base_path = base_path + "/"
+
+        def run():
+            try:
+                generate_site(
+                    DEFAULTS["content"],
+                    DEFAULTS["template"],
+                    DEFAULTS["output"],
+                    DEFAULTS["static"],
+                    base_path,
+                )
+                toast("Page deleted and site rebuilt!")
+            except Exception as exc:
+                toast(f"Page deleted but rebuild failed: {exc}", RED)
+
+        threading.Thread(target=run, daemon=True).start()
         try:
             refresh_page_list()
         except Exception:
