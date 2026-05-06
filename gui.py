@@ -12,7 +12,7 @@ Icons = ft.icons.Icons
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "src"))
 
-from main import generate_site
+from site_generator import generate_site, create_page, delete_page, get_page_list
 from ai_themes import generate_theme, apply_theme, PRELOADED_THEMES, test_api_key, detect_provider, generate_offline_theme, MOOD_PALETTES
 
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -23,6 +23,7 @@ DEFAULTS = {
     "output": os.path.join(PROJECT_ROOT, "docs"),
     "base_path": "/",
     "repo_name": "quickmark",
+    "site_url": "",
 }
 
 ACCENT = "#6568ff"
@@ -95,7 +96,6 @@ class ColorPicker:
             border=ft.border.all(1, BORDER),
         )
         self.label = ft.Text(label, size=11, color=MUTED, width=60)
-
         self.r_slider.width = 140
         self.g_slider.width = 140
         self.b_slider.width = 140
@@ -157,8 +157,9 @@ class ColorPicker:
 
 
 class FileTree:
-    def __init__(self, on_select):
+    def __init__(self, on_select, on_context=None):
         self.on_select = on_select
+        self.on_context = on_context
         self.controls = []
         self.container = None
 
@@ -215,16 +216,24 @@ class FileTree:
             if item.is_dir():
                 self._add_dir(item, indent)
             elif item.suffix in (".md", ".html", ".css", ".js", ".json", ".toml", ".txt", ".yml", ".yaml", ".sh"):
+                row_items = [
+                    ft.Container(width=indent * 16),
+                    ft.Icon(Icons.DESCRIPTION, size=14, color=DIM),
+                    ft.Text(item.name, size=13, color=TEXT, no_wrap=True, expand=True),
+                ]
+                if item.suffix == ".md" and self.on_context:
+                    row_items.append(
+                        ft.IconButton(
+                            icon=Icons.DELETE_OUTLINE,
+                            icon_size=14,
+                            icon_color=DIM,
+                            on_click=lambda e, p=str(item): self.on_context(p),
+                            tooltip="Delete page",
+                        ),
+                    )
                 self.controls.append(
                     ft.Container(
-                        content=ft.Row(
-                            [
-                                ft.Container(width=indent * 16),
-                                ft.Icon(Icons.DESCRIPTION, size=14, color=DIM),
-                                ft.Text(item.name, size=13, color=TEXT, no_wrap=True),
-                            ],
-                            spacing=6,
-                        ),
+                        content=ft.Row(row_items, spacing=4),
                         padding=ft.padding.symmetric(horizontal=8, vertical=6),
                         border_radius=6,
                         on_hover=self._hover,
@@ -301,7 +310,8 @@ def main(page: ft.Page):
     )
 
     fields = {
-        "base_path": make_input(label="Base Path", value=DEFAULTS["base_path"])
+        "base_path": make_input(label="Base Path", value=DEFAULTS["base_path"]),
+        "site_url": make_input(label="Site URL", value=DEFAULTS["site_url"], hint_text="https://username.github.io/quickmark/"),
     }
 
     def _on_mode_change(e):
@@ -443,27 +453,30 @@ def main(page: ft.Page):
     def on_new_file(e):
         def do_create(_):
             name = new_name_field.value.strip()
+            title = new_title_field.value.strip()
+            folder = new_folder_field.value.strip() if new_folder_field.value.strip() else None
             if not name:
                 return
             if not name.endswith(".md"):
                 name += ".md"
-            path = os.path.join(DEFAULTS["content"], name)
-            if os.path.exists(path):
-                toast("File already exists", RED)
+            path, err = create_page(DEFAULTS["content"], name, title, folder)
+            if err:
+                toast(err, RED)
                 return
-            with open(path, "w", encoding="utf-8") as f:
-                f.write(f"# {name.replace('.md', '')}\n\n")
             file_tree.reload(DEFAULTS["content"])
             editor.open_file(path)
             do_select_file(path)
             sidebar.update()
+            refresh_page_list()
             close_dialog()
 
         new_name_field = make_input(label="File name", value="untitled.md")
+        new_title_field = make_input(label="Display title (nav label)", value="")
+        new_folder_field = make_input(label="Subfolder (optional)", hint_text="e.g. blog, projects", value="")
 
         page.dialog = ft.AlertDialog(
-            title=ft.Text("New File"),
-            content=ft.Column([new_name_field], tight=True, spacing=12),
+            title=ft.Text("New Page"),
+            content=ft.Column([new_name_field, new_title_field, new_folder_field], tight=True, spacing=12),
             actions=[
                 ft.TextButton("Cancel", on_click=lambda e: close_dialog()),
                 ft.FilledButton("Create", on_click=do_create),
@@ -478,6 +491,29 @@ def main(page: ft.Page):
             page.dialog.open = False
             page.update()
 
+    def on_delete_page(path):
+        def confirm_delete(_):
+            delete_page(path)
+            file_tree.reload(DEFAULTS["content"])
+            refresh_page_list()
+            sidebar.update()
+            toast("Page deleted", YELLOW)
+            close_dialog()
+
+        page.dialog = ft.AlertDialog(
+            title=ft.Text("Delete Page"),
+            content=ft.Text(f"Delete {Path(path).name}?"),
+            actions=[
+                ft.TextButton("Cancel", on_click=lambda e: close_dialog()),
+                ft.TextButton("Delete", color=RED, on_click=confirm_delete),
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+        page.dialog.open = True
+        page.update()
+
+    file_tree.on_context = on_delete_page
+
     def open_folder(_):
         if sys.platform == "win32":
             os.startfile(DEFAULTS["content"])
@@ -485,6 +521,36 @@ def main(page: ft.Page):
             os.system(f'open "{DEFAULTS["content"]}"')
         else:
             os.system(f'xdg-open "{DEFAULTS["content"]}"')
+
+    pages_list = ft.Column(spacing=4, scroll=ft.ScrollMode.AUTO, expand=True)
+
+    def refresh_page_list():
+        pages_list.controls.clear()
+        pages = get_page_list(DEFAULTS["content"])
+        for p in pages:
+            icon = Icons.LANGUAGE
+            rel = p["slug"]
+            if "/" in rel:
+                parts = rel.split("/")
+                icon = Icons.FOLDER
+            pages_list.controls.append(
+                ft.Container(
+                    content=ft.Row(
+                        [
+                            ft.Icon(icon, size=14, color=DIM),
+                            ft.Text(p["title"], size=12, color=TEXT, no_wrap=True, expand=True),
+                            ft.Text(p["output"], size=10, color=DIM),
+                        ],
+                        spacing=6,
+                    ),
+                    padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                    border_radius=4,
+                    on_hover=lambda e: (setattr(e.control, "bgcolor", INPUT_HOVER if e.data == "true" else None), e.control.update()),
+                    on_click=lambda e, p=p["path"]: (editor.open_file(p), do_select_file(p)),
+                )
+            )
+        pages_list.controls.append(ft.Divider(color=BORDER, height=8))
+        pages_list.update()
 
     # -- Sidebar --
     sidebar = ft.Container(
@@ -505,14 +571,33 @@ def main(page: ft.Page):
                 ft.Container(
                     content=ft.Row(
                         [
-                            ft.Text("EXPLORER", size=11, color=MUTED, weight="bold"),
+                            ft.Text("PAGES", size=11, color=MUTED, weight="bold"),
                             ft.Container(expand=True),
                             ft.IconButton(
                                 icon=Icons.ADD,
                                 icon_size=16,
                                 icon_color=MUTED,
                                 on_click=on_new_file,
-                                tooltip="New file",
+                                tooltip="New page",
+                            ),
+                        ],
+                        spacing=4,
+                    ),
+                    padding=ft.padding.symmetric(horizontal=12, vertical=4),
+                ),
+                pages_list,
+                ft.Container(height=8),
+                ft.Container(
+                    content=ft.Row(
+                        [
+                            ft.Text("EXPLORER", size=11, color=MUTED, weight="bold"),
+                            ft.Container(expand=True),
+                            ft.IconButton(
+                                icon=Icons.REFRESH,
+                                icon_size=16,
+                                icon_color=MUTED,
+                                on_click=lambda e: file_tree.reload(DEFAULTS["content"]),
+                                tooltip="Refresh",
                             ),
                         ],
                         spacing=4,
@@ -549,9 +634,23 @@ def main(page: ft.Page):
         border=ft.border.only(right=ft.border.BorderSide(1, BORDER)),
     )
 
-    # -- Main tab bar --
-    tab_line = ft.Container(height=3, bgcolor=ACCENT, border_radius=1)
+    # -- Theme switcher in top bar --
+    theme_switcher = ft.Dropdown(
+        options=[ft.dropdown.Option(name) for name in PRELOADED_THEMES.keys()],
+        width=200,
+        border_radius=6,
+        filled=True,
+        bgcolor=INPUT_BG,
+        color=TEXT,
+        border_color="transparent",
+        focused_border_color=ACCENT,
+        content_padding=8,
+        text_size=12,
+        hint_text="Switch theme...",
+        on_select=lambda e: on_quick_theme_switch(e),
+    )
 
+    # -- Main tab bar --
     def make_tab_btn(label, idx):
         return ft.Container(
             content=ft.Text(label, size=14, color=TEXT if idx == 0 else MUTED, weight="bold"),
@@ -573,6 +672,9 @@ def main(page: ft.Page):
                 themes_tab_btn,
                 settings_tab_btn,
                 ft.Container(expand=True),
+                ft.Container(width=8),
+                theme_switcher,
+                ft.Container(width=16),
                 ft.Container(
                     content=ft.Row(
                         [
@@ -808,9 +910,9 @@ def main(page: ft.Page):
 <body>
 <div class="page-container">
 <nav class="top-nav">
-<a class="nav-link" href="/">Главная</a>
-<a class="nav-link" href="/blog/">Блог</a>
-<a class="nav-link" href="/contact/">Контакты</a>
+<a class="nav-link" href="/">Home</a>
+<a class="nav-link" href="/blog/">Blog</a>
+<a class="nav-link" href="/contact/">Contact</a>
 </nav>
 {SAMPLE_CONTENT}
 </div>
@@ -844,6 +946,15 @@ def main(page: ft.Page):
         text_size=13,
         on_select=lambda e: on_preloaded_theme(e),
     )
+
+    def on_quick_theme_switch(e):
+        name = e.control.value
+        if not name or name not in PRELOADED_THEMES:
+            return
+        css = PRELOADED_THEMES[name]
+        apply_theme(name, css, DEFAULTS["static"], DEFAULTS["output"])
+        update_preview(css)
+        toast(f"Applied: {name}")
 
     def on_preloaded_theme(e):
         name = e.control.value
@@ -1028,6 +1139,14 @@ a {{ color: var(--primary); }}
     )
 
     # -- Settings tab content --
+    site_link_btn = ft.TextButton(
+        "Open Site",
+        icon=ft.Icon(Icons.OPEN_IN_BROWSER, size=14, color=ACCENT),
+        url="https://github.com",
+        style=ft.ButtonStyle(color=ACCENT, padding=0),
+        visible=False,
+    )
+
     settings_tab_content = ft.Container(
         content=ft.Column(
             [
@@ -1043,9 +1162,25 @@ a {{ color: var(--primary); }}
                 ], spacing=12),
                 ft.Container(height=12),
                 fields["base_path"],
+                ft.Container(height=12),
+                fields["site_url"],
+                ft.Container(height=8),
+                ft.Row([
+                    ft.FilledButton("Set Site URL", icon=Icons.LINK, on_click=lambda e: update_site_link(), expand=True),
+                ]),
+                ft.Container(height=4),
+                site_link_btn,
                 ft.Container(height=24),
                 ft.Divider(color=BORDER, height=1),
                 ft.Container(height=16),
+                ft.Text("Pages", size=13, color=TEXT, weight="bold"),
+                ft.Container(height=8),
+                ft.Row([
+                    ft.FilledButton("Add Page", icon=Icons.ADD, on_click=on_new_file, expand=True),
+                    ft.Container(width=6),
+                    ft.OutlinedButton("Rebuild All", icon=Icons.REFRESH, on_click=on_generate, expand=True),
+                ]),
+                ft.Container(height=12),
                 ft.Row([
                     ft.Text("Content Directory:", size=13, color=TEXT, weight="bold"),
                     ft.Text(DEFAULTS["content"], size=12, color=MUTED),
@@ -1088,6 +1223,17 @@ a {{ color: var(--primary); }}
         visible=False,
         padding=ft.padding.all(24),
     )
+
+    def update_site_link():
+        url = fields["site_url"].value.strip()
+        if url:
+            site_link_btn.url = url if url.startswith("http") else f"https://{url}"
+            site_link_btn.visible = True
+            site_link_btn.text = f"Open {site_link_btn.url}"
+            settings_tab_content.update()
+            toast("Site URL set")
+        else:
+            toast("Enter a URL first", YELLOW)
 
     def switch_main_tab(idx):
         editor_tab_content.visible = idx == 0
@@ -1137,6 +1283,9 @@ a {{ color: var(--primary); }}
         ),
         expand=True,
     )
+
+    # -- Init --
+    refresh_page_list()
 
     # -- Main layout --
     page.add(

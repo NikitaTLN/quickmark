@@ -25,12 +25,6 @@ def markdown_to_html(markdown):
     return "\n".join(html_blocks)
 
 
-def compute_prefix(depth):
-    if depth <= 0:
-        return ""
-    return "../" * depth
-
-
 def generate_page(markdown, template, base_path="/", relative_prefix=""):
     title = extract_title(markdown)
     if title is None:
@@ -42,9 +36,11 @@ def generate_page(markdown, template, base_path="/", relative_prefix=""):
     page = page.replace("{{ Content }}", html_content)
 
     if relative_prefix:
-        page = page.replace('href="index.html"', f'href="{relative_prefix}index.html"')
-        page = page.replace('href="blog/index.html"', f'href="{relative_prefix}blog/index.html"')
-        page = page.replace('href="contact/index.html"', f'href="{relative_prefix}contact/index.html"')
+        page = re.sub(
+            r'href="([^"]*\.html)"',
+            lambda m: f'href="{relative_prefix}{m.group(1)}"',
+            page,
+        )
         page = page.replace('href="styles.css"', f'href="{relative_prefix}styles.css"')
         page = page.replace('href="ai-theme.css"', f'href="{relative_prefix}ai-theme.css"')
     else:
