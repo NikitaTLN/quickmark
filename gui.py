@@ -638,6 +638,8 @@ def main(page: ft.Page):
     )
 
     # -- Theme switcher in top bar --
+    theme_switcher_status = ft.Text("", size=11, color=GREEN)
+
     theme_switcher = ft.Dropdown(
         options=[ft.dropdown.Option(name) for name in PRELOADED_THEMES.keys()],
         width=200,
@@ -951,8 +953,6 @@ def main(page: ft.Page):
         on_select=lambda e: on_preloaded_theme(e),
     )
 
-    theme_switcher_status = ft.Text("", size=11, color=GREEN)
-
     def on_quick_theme_switch(e):
         name = e.control.value
         if not name or name not in PRELOADED_THEMES:
@@ -963,24 +963,7 @@ def main(page: ft.Page):
         theme_switcher_status.value = f"Applied: {name}"
         theme_switcher_status.color = GREEN
         main_tab_bar.update()
-
-        base_path = fields["base_path"].value
-        if not base_path.startswith("/"):
-            base_path = "/" + base_path
-        if not base_path.endswith("/"):
-            base_path = base_path + "/"
-
-        def run():
-            try:
-                generate_site(DEFAULTS["content"], DEFAULTS["template"], DEFAULTS["output"], DEFAULTS["static"], base_path)
-                theme_switcher_status.value = f"Applied: {name} - site rebuilt"
-                main_tab_bar.update()
-            except Exception as exc:
-                theme_switcher_status.value = f"Applied (CSS only): {str(exc)}"
-                theme_switcher_status.color = RED
-                main_tab_bar.update()
-
-        threading.Thread(target=run, daemon=True).start()
+        toast(f"Applied: {name}")
 
     def on_preloaded_theme(e):
         name = e.control.value
