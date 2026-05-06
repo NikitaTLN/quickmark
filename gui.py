@@ -513,6 +513,8 @@ def main(page: ft.Page):
             refresh_page_list()
         except Exception:
             pass
+        switch_main_tab(0)
+        page.update()
         toast("Page created!")
 
     def on_new_file(e):
