@@ -410,6 +410,16 @@ def main(page: ft.Page):
 
     site_preview_url = ft.Text("", size=12, color=ACCENT, selectable=True)
 
+    class NoCacheHandler(http.server.SimpleHTTPRequestHandler):
+        def end_headers(self):
+            self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+            self.send_header("Pragma", "no-cache")
+            self.send_header("Expires", "0")
+            super().end_headers()
+
+        def log_message(self, format, *args):
+            pass
+
     def on_preview(e):
         output = DEFAULTS["output"]
         if not output or not os.path.exists(output):
@@ -420,7 +430,7 @@ def main(page: ft.Page):
             os.chdir(output)
             for port in [8888, 8887, 8886, 8885]:
                 try:
-                    httpd = socketserver.TCPServer(("", port), http.server.SimpleHTTPRequestHandler)
+                    httpd = socketserver.TCPServer(("", port), NoCacheHandler)
                     log(f"Serving at http://localhost:{port}")
                     site_preview_url.value = f"Open: http://localhost:{port}"
                     site_preview_url.update()
@@ -671,7 +681,7 @@ def main(page: ft.Page):
         def run_gen_sync():
             try:
                 css = generate_theme(ai_prompt.value or "Modern, beautiful, animated dark theme", DEFAULTS["content"], key)
-                apply_theme("ai-theme", css, DEFAULTS["static"])
+                apply_theme("ai-theme", css, DEFAULTS["static"], DEFAULTS["output"])
                 ai_status.value = "Theme applied!"
                 ai_status.color = GREEN
                 update_preview(css)
@@ -717,7 +727,7 @@ def main(page: ft.Page):
         style = style_dropdown.value or "modern"
         css = generate_offline_theme(mood=mood, style=style, animation="smooth")
         name = f"Offline ({mood.replace('_', ' ').title()})"
-        apply_theme(name, css, DEFAULTS["static"])
+        apply_theme(name, css, DEFAULTS["static"], DEFAULTS["output"])
         offline_status.value = f"Applied: {name}"
         offline_status.color = GREEN
         update_preview(css)
@@ -754,6 +764,9 @@ def main(page: ft.Page):
             if self.path == "/":
                 self.send_response(200)
                 self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+                self.send_header("Pragma", "no-cache")
+                self.send_header("Expires", "0")
                 self.end_headers()
                 if os.path.exists(preview_file_path):
                     with open(preview_file_path, "rb") as f:
@@ -829,15 +842,19 @@ def main(page: ft.Page):
         focused_border_color=ACCENT,
         content_padding=12,
         text_size=13,
+        on_change=lambda e: on_preloaded_theme(e),
     )
 
     def on_preloaded_theme(e):
-        name = theme_dropdown.value
-        css = PRELOADED_THEMES.get(name, "")
-        apply_theme(name, css, DEFAULTS["static"])
+        name = e.control.value
+        if not name or name not in PRELOADED_THEMES:
+            return
+        css = PRELOADED_THEMES[name]
+        apply_theme(name, css, DEFAULTS["static"], DEFAULTS["output"])
         ai_status.value = f"Applied: {name}"
         ai_status.color = GREEN
         update_preview(css)
+        on_generate(e)
         themes_tab_content.update()
 
     cp_bg = ColorPicker("Background", "#1a1b26")
@@ -905,7 +922,7 @@ p:nth-child(4) {{ animation-delay: 0.2s; }}
 @keyframes fadeIn {{ from {{ opacity: 0; }} to {{ opacity: 1; }} }}
 """
         name = custom_name_field.value or "Custom Theme"
-        apply_theme(name, css, DEFAULTS["static"])
+        apply_theme(name, css, DEFAULTS["static"], DEFAULTS["output"])
         custom_status.value = f"Applied: {name}"
         custom_status.color = GREEN
         update_preview(css)

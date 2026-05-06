@@ -759,10 +759,14 @@ p:nth-child(4) { animation-delay: 0.2s; }
 """,
 }
 
-def apply_theme(name, css_content, static_dir):
+def apply_theme(name, css_content, static_dir, output_dir=None):
     path = os.path.join(static_dir, "ai-theme.css")
     with open(path, "w", encoding="utf-8") as f:
         f.write(css_content)
+    if output_dir and os.path.isdir(output_dir):
+        out_path = os.path.join(output_dir, "ai-theme.css")
+        with open(out_path, "w", encoding="utf-8") as f:
+            f.write(css_content)
     return path
 
 MOOD_PALETTES = {
