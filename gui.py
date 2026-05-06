@@ -1,8 +1,10 @@
 import os
 import sys
+import tempfile
 import threading
 import http.server
 import socketserver
+import webbrowser
 from pathlib import Path
 
 import flet as ft
@@ -717,13 +719,30 @@ def main(page: ft.Page):
         themes_tab_content.update()
 
     preview_container = ft.Container(
-        content=ft.Text("Select or generate a theme to see preview", size=12, color=MUTED, text_align=ft.TextAlign.CENTER),
+        content=ft.Column([
+            ft.Icon(Icons.PREVIEW, size=48, color=DIM),
+            ft.Text("No theme loaded yet", size=14, color=MUTED),
+            ft.Text("Generate or select a theme to preview", size=12, color=DIM),
+        ], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
         bgcolor=INPUT_BG,
         border_radius=8,
         border=ft.border.all(1, BORDER),
-        padding=0,
+        padding=24,
         expand=True,
     )
+
+    preview_btn = ft.OutlinedButton(
+        "Open in Browser",
+        icon=Icons.OPEN_IN_BROWSER,
+        visible=False,
+        on_click=lambda e: open_preview_browser(),
+    )
+
+    preview_info = ft.Text("", size=11, color=DIM)
+
+    def open_preview_browser():
+        if os.path.exists(temp_preview_path):
+            webbrowser.open(f"file://{temp_preview_path}")
 
     def update_preview(css):
         base_css = open(os.path.join(DEFAULTS["static"], "styles.css"), "r", encoding="utf-8").read()
@@ -748,7 +767,20 @@ def main(page: ft.Page):
 </div>
 </body>
 </html>"""
-        preview_container.content = ft.Html(html, expand=True)
+        global temp_preview_path
+        temp_preview_path = os.path.join(tempfile.gettempdir(), "quickmark_preview.html")
+        with open(temp_preview_path, "w", encoding="utf-8") as f:
+            f.write(html)
+        preview_container.content = ft.Column([
+            ft.Row([
+                ft.Icon(Icons.CHECK_CIRCLE, size=20, color=GREEN),
+                ft.Text("Preview ready", size=13, color=TEXT, weight="bold"),
+            ]),
+            preview_btn,
+            preview_info,
+        ], spacing=8)
+        preview_btn.visible = True
+        preview_info.value = f"File: {temp_preview_path}"
         preview_container.update()
 
     theme_dropdown = ft.Dropdown(
@@ -784,16 +816,27 @@ def main(page: ft.Page):
 
     custom_name_field = make_input(label="Theme Name", value="My Custom Theme", width=250)
 
+    def _hex_to_rgba(hex_color, alpha):
+        hex_color = hex_color.lstrip("#")
+        if len(hex_color) == 6:
+            r = int(hex_color[0:2], 16)
+            g = int(hex_color[2:4], 16)
+            b = int(hex_color[4:6], 16)
+            return f"rgba({r},{g},{b},{alpha})"
+        return f"rgba(100,100,100,{alpha})"
+
     def on_apply_custom(e):
+        p = cp_primary.value
+        bg_rgba = _hex_to_rgba(p, 0.1)
         css = f""":root {{ --bg: {cp_bg.value}; --surface: {cp_surface.value}; --text: {cp_text.value}; --primary: {cp_primary.value}; --accent: {cp_accent.value}; --muted: {cp_muted.value}; }}
 html {{ scroll-behavior: smooth; }}
 body {{ background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, sans-serif; line-height: 1.7; }}
 .page-container {{ max-width: 900px; margin: 0 auto; padding: 48px 24px; animation: fadeInUp 0.7s cubic-bezier(0.22, 1, 0.36, 1) both; }}
 .top-nav {{ display: flex; gap: 4px; padding: 10px 0; margin-bottom: 32px; border-bottom: 1px solid var(--surface); flex-wrap: wrap; animation: slideDown 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both; }}
 .nav-link {{ color: var(--muted); text-decoration: none; font-size: 0.9rem; font-weight: 500; padding: 8px 16px; border-radius: 6px; transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1); }}
-.nav-link:hover {{ color: var(--primary); background: rgba(122,162,247,0.08); text-decoration: none; transform: translateY(-1px); }}
+.nav-link:hover {{ color: var(--text); background: {bg_rgba}; text-decoration: none; transform: translateY(-1px); }}
 h1, h2, h3 {{ color: var(--text); transition: color 0.3s ease, text-shadow 0.3s ease; }}
-h1:hover, h2:hover, h3:hover {{ color: var(--primary); text-shadow: 0 0 15px rgba(122,162,247,0.2); }}
+h1:hover, h2:hover, h3:hover {{ color: var(--primary); text-shadow: 0 0 15px {bg_rgba.replace("0.1", "0.25")}; }}
 h1 {{ font-size: clamp(1.8rem, 4vw, 2.6rem); }}
 h2 {{ font-size: clamp(1.3rem, 3vw, 1.8rem); }}
 h1::after, h2::after {{ content: ''; display: block; width: 40px; height: 3px; background: var(--primary); margin-top: 10px; border-radius: 3px; transition: width 0.4s cubic-bezier(0.22, 1, 0.36, 1); }}
@@ -803,7 +846,7 @@ a::after {{ content: ''; position: absolute; bottom: -2px; left: 0; width: 0; he
 a:hover::after {{ width: 100%; }}
 pre {{ background: var(--surface); border-radius: 8px; padding: 1.2em; border-left: 3px solid var(--primary); transition: all 0.3s ease; }}
 pre:hover {{ box-shadow: 0 4px 15px rgba(0,0,0,0.3); }}
-code {{ background: rgba(122,162,247,0.1); color: var(--primary); padding: 2px 6px; border-radius: 4px; font-size: 0.88em; }}
+code {{ background: {bg_rgba}; color: var(--primary); padding: 2px 6px; border-radius: 4px; font-size: 0.88em; }}
 pre code {{ background: none; color: var(--text); }}
 blockquote {{ border-left: 3px solid var(--accent); background: var(--surface); padding: 1em 1.5em; border-radius: 0 8px 8px 0; color: var(--muted); }}
 blockquote:hover {{ border-left-color: var(--primary); }}
@@ -817,11 +860,11 @@ p {{ animation: fadeIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }}
 p:nth-child(2) {{ animation-delay: 0.08s; }}
 p:nth-child(3) {{ animation-delay: 0.14s; }}
 p:nth-child(4) {{ animation-delay: 0.2s; }}
-::selection {{ background: rgba(122,162,247,0.3); color: #fff; }}
+::selection {{ background: {bg_rgba.replace("0.1", "0.3")}; color: #fff; }}
 ::-webkit-scrollbar {{ width: 8px; }}
 ::-webkit-scrollbar-track {{ background: var(--bg); }}
-::-webkit-scrollbar-thumb {{ background: rgba(122,162,247,0.2); border-radius: 4px; }}
-::-webkit-scrollbar-thumb:hover {{ background: rgba(122,162,247,0.4); }}
+::-webkit-scrollbar-thumb {{ background: {bg_rgba.replace("0.1", "0.2")}; border-radius: 4px; }}
+::-webkit-scrollbar-thumb:hover {{ background: {bg_rgba.replace("0.1", "0.4")}; }}
 @keyframes fadeInUp {{ from {{ opacity: 0; transform: translateY(25px); }} to {{ opacity: 1; transform: translateY(0); }} }}
 @keyframes slideDown {{ from {{ opacity: 0; transform: translateY(-12px); }} to {{ opacity: 1; transform: translateY(0); }} }}
 @keyframes fadeIn {{ from {{ opacity: 0; }} to {{ opacity: 1; }} }}
@@ -834,13 +877,15 @@ p:nth-child(4) {{ animation-delay: 0.2s; }}
         themes_tab_content.update()
 
     def on_custom_change(_):
+        p = cp_primary.value
+        bg_rgba = _hex_to_rgba(p, 0.1)
         css = f""":root {{ --bg: {cp_bg.value}; --surface: {cp_surface.value}; --text: {cp_text.value}; --primary: {cp_primary.value}; --accent: {cp_accent.value}; --muted: {cp_muted.value}; }}
 body {{ background: var(--bg); color: var(--text); }}
 h1, h2, h3 {{ color: var(--text); }}
-h1:hover, h2:hover, h3:hover {{ color: var(--primary); text-shadow: 0 0 15px rgba(122,162,247,0.2); transition: all 0.3s ease; }}
+h1:hover, h2:hover, h3:hover {{ color: var(--primary); text-shadow: 0 0 15px {bg_rgba.replace("0.1", "0.25")}; transition: all 0.3s ease; }}
 a {{ color: var(--primary); }}
 .nav-link {{ color: var(--muted); }}
-.nav-link:hover {{ color: var(--primary); background: rgba(122,162,247,0.08); text-decoration: none; }}
+.nav-link:hover {{ color: var(--text); background: {bg_rgba}; text-decoration: none; }}
 """
         update_preview(css)
 
