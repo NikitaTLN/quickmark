@@ -37,6 +37,7 @@ BORDER = "#30363d"
 RED = "#f85149"
 GREEN = "#3fb950"
 YELLOW = "#d29922"
+BLUE = "#58a6ff"
 
 FONT_MONO = "Cascadia Code, Fira Code, Consolas, monospace"
 
@@ -498,20 +499,22 @@ def main(page: ft.Page):
         ai_status.color = BLUE
         right_panel.update()
 
-        async def run_gen():
-            try:
-                css = await generate_theme(ai_prompt.value, DEFAULTS["content"], key)
-                apply_theme("ai-theme", css, DEFAULTS["static"])
-                ai_status.value = "Theme applied! Rebuild site to see."
-                ai_status.color = GREEN
-                on_generate(e)
-            except Exception as exc:
-                ai_status.value = f"Error: {str(exc)}"
-                ai_status.color = RED
-            right_panel.update()
+        def run_gen_sync():
+            import asyncio
+            async def do_gen():
+                try:
+                    css = await generate_theme(ai_prompt.value, DEFAULTS["content"], key)
+                    apply_theme("ai-theme", css, DEFAULTS["static"])
+                    ai_status.value = "Theme applied! Rebuild site to see."
+                    ai_status.color = GREEN
+                    on_generate(e)
+                except Exception as exc:
+                    ai_status.value = f"Error: {str(exc)}"
+                    ai_status.color = RED
+                right_panel.update()
+            asyncio.run(do_gen())
 
-        import asyncio
-        asyncio.get_event_loop().run_until_complete(run_gen())
+        threading.Thread(target=run_gen_sync, daemon=True).start()
 
     def on_preloaded_theme(e):
         name = theme_dropdown.value
