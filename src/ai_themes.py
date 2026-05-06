@@ -22,28 +22,58 @@ def get_content_context(content_dir):
 
 import os
 import re
-import httpx
+import json
 
-async def generate_theme(prompt, content_dir, api_key):
+def validate_api_key(api_key):
+    api_key = api_key.strip().replace('"', '').replace("'", "")
+    if not api_key.startswith("gsk_"):
+        return False, "Keys should start with 'gsk_'. Check you copied the full key."
+    return True, "Valid format"
+
+def test_api_key(api_key):
+    import httpx
+    api_key = api_key.strip().replace('"', '').replace("'", "")
+    try:
+        with httpx.Client(timeout=10.0) as client:
+            resp = client.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                json={
+                    "model": "llama-3.3-70b-versatile",
+                    "messages": [{"role": "user", "content": "Hi"}],
+                    "max_tokens": 1,
+                },
+            )
+            if resp.status_code == 200:
+                return True, "Key is valid!"
+            elif resp.status_code == 401:
+                return False, "Invalid API key. Please check https://console.groq.com/keys"
+            else:
+                return False, f"API error {resp.status_code}: {resp.text[:200]}"
+    except Exception as e:
+        return False, f"Connection failed: {str(e)}"
+
+def generate_theme(prompt, content_dir, api_key):
+    api_key = api_key.strip().replace('"', '').replace("'", "")
     context = get_content_context(content_dir)
     user_prompt = f"Project context:\n{context}\n\nUser request: {prompt}\n\nMake it stunning."
 
-    async with httpx.AsyncClient() as client:
-        resp = await client.post(
+    import httpx
+    with httpx.Client(timeout=60.0) as client:
+        resp = client.post(
             "https://api.groq.com/openai/v1/chat/completions",
             headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
             json={
                 "model": "llama-3.3-70b-versatile",
                 "messages": [
-                    {"role": "system", "content": "You are a master CSS designer. Return ONLY valid CSS."},
+                    {"role": "system", "content": "You are a master CSS designer. Return ONLY valid CSS. No markdown, no explanations."},
                     {"role": "user", "content": user_prompt},
                 ],
                 "temperature": 0.8,
             },
-            timeout=30.0,
         )
         if resp.status_code == 401:
-            raise Exception("Invalid API key. Please check https://console.groq.com/keys")
+            raise Exception("Invalid API key. Make sure it starts with 'gsk_' and has no extra spaces.")
         resp.raise_for_status()
         css = resp.json()["choices"][0]["message"]["content"]
         return re.sub(r'^```css\s*|\s*```$', '', css).strip()

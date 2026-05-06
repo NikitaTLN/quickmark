@@ -12,7 +12,7 @@ Icons = ft.icons.Icons
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "src"))
 
 from main import generate_site
-from ai_themes import generate_theme, apply_theme, PRELOADED_THEMES
+from ai_themes import generate_theme, apply_theme, PRELOADED_THEMES, test_api_key
 
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 DEFAULTS = {
@@ -498,32 +498,49 @@ def main(page: ft.Page):
 
     ai_status = ft.Text("", size=12, color=MUTED)
 
-    def on_generate_theme(e):
+    def on_test_key(e):
         key = api_key_field.value.strip()
+        if not key:
+            ai_status.value = "Enter a key first"
+            ai_status.color = RED
+            right_panel.update()
+            return
+
+        ai_status.value = "Testing..."
+        ai_status.color = BLUE
+        right_panel.update()
+
+        def run_test():
+            success, msg = test_api_key(key)
+            ai_status.value = msg
+            ai_status.color = GREEN if success else RED
+            right_panel.update()
+
+        threading.Thread(target=run_test, daemon=True).start()
+
+    def on_generate_theme(e):
+        key = api_key_field.value.strip().replace('"', '').replace("'", "")
         if not key:
             ai_status.value = "Please enter your Groq API key"
             ai_status.color = RED
             right_panel.update()
             return
 
-        ai_status.value = "✨ Generating..."
+        ai_status.value = "✨ Generating... (this may take 10-20s)"
         ai_status.color = BLUE
         right_panel.update()
 
         def run_gen_sync():
-            import asyncio
-            async def do_gen():
-                try:
-                    css = await generate_theme(ai_prompt.value, DEFAULTS["content"], key)
-                    apply_theme("ai-theme", css, DEFAULTS["static"])
-                    ai_status.value = "Theme applied! Rebuild site to see."
-                    ai_status.color = GREEN
-                    on_generate(e)
-                except Exception as exc:
-                    ai_status.value = f"Error: {str(exc)}"
-                    ai_status.color = RED
-                right_panel.update()
-            asyncio.run(do_gen())
+            try:
+                css = generate_theme(ai_prompt.value or "Modern, beautiful, animated dark theme", DEFAULTS["content"], key)
+                apply_theme("ai-theme", css, DEFAULTS["static"])
+                ai_status.value = "✨ Theme applied! Rebuild site to see."
+                ai_status.color = GREEN
+                on_generate(e)
+            except Exception as exc:
+                ai_status.value = f"Error: {str(exc)}"
+                ai_status.color = RED
+            right_panel.update()
 
         threading.Thread(target=run_gen_sync, daemon=True).start()
 
@@ -567,16 +584,30 @@ def main(page: ft.Page):
                     spacing=0,
                 ),
                 api_key_field,
-                ft.Container(height=8),
+                ft.Container(height=4),
                 ai_prompt,
                 ft.Container(height=8),
-                ft.FilledButton(
-                    "✨ Generate Theme",
-                    icon=Icons.AUTO_AWESOME,
-                    on_click=on_generate_theme,
-                    height=40,
-                    expand=True,
+                ft.Row(
+                    [
+                        ft.FilledButton(
+                            "✨ Generate Theme",
+                            icon=Icons.AUTO_AWESOME,
+                            on_click=on_generate_theme,
+                            height=40,
+                            expand=2,
+                        ),
+                        ft.Container(width=8),
+                        ft.OutlinedButton(
+                            "Test Key",
+                            icon=Icons.CHECK,
+                            on_click=on_test_key,
+                            height=40,
+                            expand=1,
+                        ),
+                    ],
+                    spacing=0,
                 ),
+                ft.Container(height=4),
                 ft.Container(height=4),
                 ai_status,
                 ft.Container(height=12),
