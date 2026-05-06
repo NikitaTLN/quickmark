@@ -461,66 +461,89 @@ def main(page: ft.Page):
 
         threading.Thread(target=serve, daemon=True).start()
 
+    dialog_result = {}
+
     def on_new_file(e):
+        new_name_field = make_input(label="File name", value="untitled.md", autofocus=True)
+        new_title_field = make_input(label="Display title (nav label)", value="")
+        new_folder_field = make_input(label="Subfolder (optional)", hint_text="e.g. blog, projects", value="")
+        status_text = ft.Text("", size=12, color=RED)
+
         def do_create(_):
             name = new_name_field.value.strip()
             title = new_title_field.value.strip()
             folder = new_folder_field.value.strip() if new_folder_field.value.strip() else None
             if not name:
+                status_text.value = "File name is required"
+                status_text.color = RED
+                dialog.update()
                 return
             if not name.endswith(".md"):
                 name += ".md"
             path, err = create_page(DEFAULTS["content"], name, title, folder)
             if err:
-                toast(err, RED)
+                status_text.value = err
+                status_text.color = RED
+                dialog.update()
                 return
+            dialog.open = False
+            page.update()
             file_tree.reload(DEFAULTS["content"])
             editor.open_file(path)
             do_select_file(path)
             sidebar.update()
-            refresh_page_list()
-            close_dialog()
+            try:
+                refresh_page_list()
+            except Exception:
+                pass
+            toast("Page created!")
 
-        new_name_field = make_input(label="File name", value="untitled.md")
-        new_title_field = make_input(label="Display title (nav label)", value="")
-        new_folder_field = make_input(label="Subfolder (optional)", hint_text="e.g. blog, projects", value="")
-
-        page.dialog = ft.AlertDialog(
+        dialog = ft.AlertDialog(
             title=ft.Text("New Page"),
-            content=ft.Column([new_name_field, new_title_field, new_folder_field], tight=True, spacing=12),
+            content=ft.Column([
+                new_name_field,
+                new_title_field,
+                new_folder_field,
+                status_text,
+            ], tight=True, spacing=12, expand=True),
             actions=[
-                ft.TextButton("Cancel", on_click=lambda e: close_dialog()),
+                ft.TextButton("Cancel", on_click=lambda e: _close_dialog(dialog)),
                 ft.FilledButton("Create", on_click=do_create),
             ],
             actions_alignment=ft.MainAxisAlignment.END,
         )
-        page.dialog.open = True
+        dialog.open = True
+        page.dialog = dialog
         page.update()
 
-    def close_dialog():
-        if page.dialog:
-            page.dialog.open = False
-            page.update()
+    def _close_dialog(d):
+        d.open = False
+        page.update()
 
     def on_delete_page(path):
         def confirm_delete(_):
             delete_page(path)
             file_tree.reload(DEFAULTS["content"])
-            refresh_page_list()
+            try:
+                refresh_page_list()
+            except Exception:
+                pass
             sidebar.update()
+            dialog.open = False
+            page.update()
             toast("Page deleted", YELLOW)
-            close_dialog()
 
-        page.dialog = ft.AlertDialog(
+        dialog = ft.AlertDialog(
             title=ft.Text("Delete Page"),
             content=ft.Text(f"Delete {Path(path).name}?"),
             actions=[
-                ft.TextButton("Cancel", on_click=lambda e: close_dialog()),
+                ft.TextButton("Cancel", on_click=lambda e: _close_dialog(dialog)),
                 ft.TextButton("Delete", color=RED, on_click=confirm_delete),
             ],
             actions_alignment=ft.MainAxisAlignment.END,
         )
-        page.dialog.open = True
+        dialog.open = True
+        page.dialog = dialog
         page.update()
 
     file_tree.on_context = on_delete_page
