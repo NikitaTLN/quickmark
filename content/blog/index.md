@@ -13,6 +13,9 @@ Building a static site generator from scratch is a great way to learn about:
 
 Here's some code example:
 
+![cool looking cat](/images/image.png)
+
+
 ```
 def hello_world():
     print("Hello, World!")

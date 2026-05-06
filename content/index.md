@@ -1,14 +1,9 @@
-# Welcome to My Static Site
+# Добро пожаловать на главную страницу с информацией об Никите Любимове
 
-This is the home page of my static site generator built with Python.
+Я надеюсь, вы сможете узнать меня поближе на данной странице.
 
-## About This Project
+## Обо мне
 
-This site was generated using a custom static site generator that converts **Markdown** files into HTML pages. It supports:
+Я картингист, мне 14 лет и у меня еще очень больше количество других хобби.
 
-- **Bold text** and _italic text_
-- `Inline code` formatting
-- [Links](https://www.boot.dev) to external sites
-- Images and more
-
-Check out the [blog](/blog/) section for more content, or visit the [contact](/contact/) page.
+Зайдите в [блог](/blog/), чтобы увидеть множество моих проектов связанных с программированием, или посетите страницу [с контактами](/contact/).
