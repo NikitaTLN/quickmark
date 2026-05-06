@@ -12,7 +12,7 @@ Icons = ft.icons.Icons
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "src"))
 
 from main import generate_site
-from ai_themes import generate_theme, apply_theme, PRELOADED_THEMES, test_api_key, detect_provider
+from ai_themes import generate_theme, apply_theme, PRELOADED_THEMES, test_api_key, detect_provider, generate_offline_theme, MOOD_PALETTES
 
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 DEFAULTS = {
@@ -42,7 +42,7 @@ BLUE = "#58a6ff"
 FONT_MONO = "Cascadia Code, Fira Code, Consolas, monospace"
 
 SIDEBAR_W = 260
-RIGHT_PANEL_W = 290
+RIGHT_PANEL_W = 360
 
 
 def make_input(**kwargs):
@@ -189,9 +189,9 @@ def main(page: ft.Page):
     page.theme_mode = ft.ThemeMode.DARK
     page.bgcolor = SURFACE
     page.padding = 0
-    page.window_width = 1200
+    page.window_width = 1280
     page.window_height = 750
-    page.window_min_width = 900
+    page.window_min_width = 980
     page.window_min_height = 600
 
     editor = Editor()
@@ -552,6 +552,7 @@ def main(page: ft.Page):
                 apply_theme("ai-theme", css, DEFAULTS["static"])
                 ai_status.value = "Theme applied! Rebuild to preview."
                 ai_status.color = GREEN
+                update_preview(css)
                 on_generate(e)
             except Exception as exc:
                 ai_status.value = f"Error: {str(exc)}"
@@ -566,6 +567,7 @@ def main(page: ft.Page):
         apply_theme(name, css, DEFAULTS["static"])
         ai_status.value = f"Applied: {name}"
         ai_status.color = GREEN
+        update_preview(css)
         on_generate(e)
         right_panel.update()
 
@@ -582,6 +584,104 @@ def main(page: ft.Page):
         text_size=13,
         on_select=on_preloaded_theme,
     )
+
+    offline_status = ft.Text("", size=12, color=MUTED)
+
+    mood_dropdown = ft.Dropdown(
+        label="Mood",
+        options=[ft.dropdown.Option(m) for m in MOOD_PALETTES.keys()],
+        value="dark_calm",
+        border_radius=8,
+        filled=True,
+        bgcolor=INPUT_BG,
+        color=TEXT,
+        border_color="transparent",
+        focused_border_color=ACCENT,
+        content_padding=12,
+        text_size=13,
+    )
+
+    style_dropdown = ft.Dropdown(
+        label="Style",
+        options=[ft.dropdown.Option(s) for s in ["modern", "minimal", "bold"]],
+        value="modern",
+        border_radius=8,
+        filled=True,
+        bgcolor=INPUT_BG,
+        color=TEXT,
+        border_color="transparent",
+        focused_border_color=ACCENT,
+        content_padding=12,
+        text_size=13,
+    )
+
+    def on_generate_offline(e):
+        mood = mood_dropdown.value or "dark_calm"
+        style = style_dropdown.value or "modern"
+        css = generate_offline_theme(mood=mood, style=style, animation="smooth")
+        name = f"Offline ({mood.replace('_', ' ').title()})"
+        apply_theme(name, css, DEFAULTS["static"])
+        offline_status.value = f"Applied: {name}"
+        offline_status.color = GREEN
+        update_preview(css)
+        on_generate(e)
+        right_panel.update()
+
+    preview_container = ft.Container(
+        content=ft.Text("Select or generate a theme to see preview", size=12, color=MUTED, text_align=ft.TextAlign.CENTER),
+        bgcolor=INPUT_BG,
+        border_radius=8,
+        border=ft.border.all(1, BORDER),
+        padding=0,
+        height=300,
+    )
+
+    SAMPLE_CONTENT = """
+<h1>Welcome to My Blog</h1>
+<p>This is a sample paragraph to preview your theme. The text should be readable and well-styled.</p>
+<h2>Features</h2>
+<p>Here are some things this site supports:</p>
+<ul>
+<li>Markdown to HTML conversion</li>
+<li>Custom CSS themes</li>
+<li>Responsive design</li>
+</ul>
+<h2>Code Example</h2>
+<p>Here's how a code block looks:</p>
+<pre><code>def hello():
+    print("Hello, World!")
+</code></pre>
+<blockquote>This is a blockquote. It should have a distinct left border and subtle background.</blockquote>
+<p>Visit our <a href="/blog/">blog page</a> for more articles.</p>
+<hr>
+<p>Final paragraph with some closing text.</p>
+"""
+
+    def update_preview(css):
+        base_css = open(os.path.join(DEFAULTS["static"], "styles.css"), "r", encoding="utf-8").read()
+        html = f"""<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+{base_css}
+{css}
+</style>
+</head>
+<body>
+<div class="page-container">
+<nav class="top-nav">
+<a class="nav-link" href="/">Главная</a>
+<a class="nav-link" href="/blog/">Блог</a>
+<a class="nav-link" href="/contact/">Контакты</a>
+</nav>
+{SAMPLE_CONTENT}
+</div>
+</body>
+</html>"""
+        preview_container.content = ft.Html(html, expand=True)
+        preview_container.update()
 
     tab_line = ft.Container(height=2, bgcolor=ACCENT, border_radius=1)
     settings_tab_btn = ft.Container(
@@ -677,6 +777,29 @@ def main(page: ft.Page):
                 ft.Container(height=8),
                 ai_status,
                 ft.Container(height=16),
+                ft.Divider(color=BORDER, height=1),
+                ft.Container(height=12),
+                ft.Text("Offline Theme Generator", size=13, color=MUTED, weight="bold"),
+                ft.Container(height=8),
+                mood_dropdown,
+                ft.Container(height=6),
+                style_dropdown,
+                ft.Container(height=10),
+                ft.FilledButton(
+                    "Generate Offline",
+                    icon=Icons.PALETTE,
+                    on_click=on_generate_offline,
+                    expand=True,
+                ),
+                ft.Container(height=6),
+                offline_status,
+                ft.Container(height=16),
+                ft.Divider(color=BORDER, height=1),
+                ft.Container(height=12),
+                ft.Text("Live Preview", size=13, color=MUTED, weight="bold"),
+                ft.Container(height=8),
+                preview_container,
+                ft.Container(height=12),
                 ft.Divider(color=BORDER, height=1),
                 ft.Container(height=12),
                 theme_dropdown,

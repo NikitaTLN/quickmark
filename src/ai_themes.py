@@ -764,3 +764,152 @@ def apply_theme(name, css_content, static_dir):
     with open(path, "w", encoding="utf-8") as f:
         f.write(css_content)
     return path
+
+MOOD_PALETTES = {
+    "dark_calm": {
+        "bg": "#1a1b26", "surface": "#24283b", "text": "#c0caf5",
+        "primary": "#7aa2f7", "accent": "#9ece6a", "muted": "#565f89",
+        "heading_color": "var(--text)", "link_color": "var(--primary)",
+        "border_style": "solid", "glow": "rgba(122,162,247,0.2)",
+    },
+    "dark_bold": {
+        "bg": "#161616", "surface": "#262626", "text": "#f2f4f8",
+        "primary": "#78a9ff", "accent": "#42be65", "muted": "#525252",
+        "heading_color": "var(--primary)", "link_color": "var(--accent)",
+        "border_style": "gradient", "glow": "rgba(120,169,255,0.25)",
+    },
+    "dark_warm": {
+        "bg": "#282828", "surface": "#353535", "text": "#ebdbb2",
+        "primary": "#83a598", "accent": "#b8bb26", "muted": "#7c6f64",
+        "heading_color": "var(--yellow)", "link_color": "var(--primary)",
+        "border_style": "rounded", "glow": "rgba(250,189,47,0.2)",
+    },
+    "dark_mystic": {
+        "bg": "#282A36", "surface": "#373844", "text": "#F8F8F2",
+        "primary": "#BD93F9", "accent": "#50fa7b", "muted": "#626483",
+        "heading_color": "var(--pink)", "link_color": "var(--cyan)",
+        "border_style": "rounded", "glow": "rgba(189,147,249,0.2)",
+    },
+    "dark_ocean": {
+        "bg": "#0f1923", "surface": "#1a2733", "text": "#d4dce8",
+        "primary": "#5dade2", "accent": "#48c9b0", "muted": "#5b7a8c",
+        "heading_color": "var(--primary)", "link_color": "var(--accent)",
+        "border_style": "solid", "glow": "rgba(93,173,226,0.2)",
+    },
+    "dark_rose": {
+        "bg": "#1e1b24", "surface": "#2a2632", "text": "#d6cfc0",
+        "primary": "#e6a0c8", "accent": "#b8e0b8", "muted": "#5e5666",
+        "heading_color": "var(--primary)", "link_color": "var(--primary)",
+        "border_style": "rounded", "glow": "rgba(230,160,200,0.2)",
+    },
+    "light_clean": {
+        "bg": "#ffffff", "surface": "#f5f5f5", "text": "#1a1a1a",
+        "primary": "#2563eb", "accent": "#059669", "muted": "#6b7280",
+        "heading_color": "var(--primary)", "link_color": "var(--primary)",
+        "border_style": "solid", "glow": "rgba(37,99,235,0.15)",
+    },
+    "light_warm": {
+        "bg": "#faf7f2", "surface": "#f0ebe3", "text": "#2c2418",
+        "primary": "#b45309", "accent": "#65a30d", "muted": "#78716c",
+        "heading_color": "var(--primary)", "link_color": "var(--accent)",
+        "border_style": "rounded", "glow": "rgba(180,83,9,0.15)",
+    },
+    "light_nord": {
+        "bg": "#ECEFF4", "surface": "#E5E9F0", "text": "#2E3440",
+        "primary": "#5E81AC", "accent": "#A3BE8C", "muted": "#4C566A",
+        "heading_color": "var(--primary)", "link_color": "var(--primary)",
+        "border_style": "solid", "glow": "rgba(94,129,172,0.15)",
+    },
+    "dark_matrix": {
+        "bg": "#0a0a0a", "surface": "#111111", "text": "#c8ffc8",
+        "primary": "#00ff41", "accent": "#00cc33", "muted": "#3a5a3a",
+        "heading_color": "var(--primary)", "link_color": "var(--primary)",
+        "border_style": "solid", "glow": "rgba(0,255,65,0.2)",
+    },
+}
+
+BORDER_STYLES = {
+    "solid": """
+pre { border-left: 3px solid var(--primary); }
+blockquote { border-left: 3px solid var(--accent); }
+""",
+    "gradient": """
+pre { border-left: 3px solid var(--cyan); background: linear-gradient(135deg, var(--surface), rgba(120,169,255,0.03)); }
+blockquote { border-left: 3px solid var(--accent); }
+""",
+    "rounded": """
+pre { border: 1px solid rgba(189,147,249,0.1); border-radius: 8px; }
+blockquote { border-left: 3px solid var(--accent); border-radius: 0 8px 8px 0; }
+""",
+}
+
+def generate_offline_theme(mood="dark_calm", style="modern", animation="smooth"):
+    p = MOOD_PALETTES.get(mood, MOOD_PALETTES["dark_calm"])
+    anim_speed = {"smooth": "0.7s", "fast": "0.4s", "dramatic": "1.0s"}.get(animation, "0.7s")
+    border_css = BORDER_STYLES.get(p["border_style"], BORDER_STYLES["solid"])
+
+    heading_after_style = ""
+    if style == "minimal":
+        heading_after_style = """
+h1::after, h2::after { content: ''; display: block; width: 30px; height: 2px; background: var(--primary); margin-top: 8px; border-radius: 2px; transition: width 0.3s ease; }
+h1:hover::after, h2:hover::after { width: 60px; }
+"""
+    elif style == "bold":
+        heading_after_style = """
+h1::after, h2::after { content: ''; display: block; width: 60px; height: 4px; background: linear-gradient(90deg, var(--primary), var(--accent)); margin-top: 12px; border-radius: 4px; transition: width 0.4s cubic-bezier(0.22, 1, 0.36, 1); }
+h1:hover::after, h2:hover::after { width: 120px; box-shadow: 0 2px 10px var(--glow); }
+"""
+    else:
+        heading_after_style = """
+h1::after, h2::after { content: ''; display: block; width: 40px; height: 3px; background: var(--primary); margin-top: 10px; border-radius: 3px; transition: width 0.4s cubic-bezier(0.22, 1, 0.36, 1); }
+h1:hover::after, h2:hover::after { width: 80px; }
+"""
+
+    return f""":root {{ --bg: {p["bg"]}; --surface: {p["surface"]}; --text: {p["text"]}; --primary: {p["primary"]}; --accent: {p["accent"]}; --muted: {p["muted"]}; }}
+html {{ scroll-behavior: smooth; }}
+body {{ background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, sans-serif; line-height: 1.7; }}
+.page-container {{ max-width: 900px; margin: 0 auto; padding: 48px 24px; animation: fadeInUp {anim_speed} cubic-bezier(0.22, 1, 0.36, 1) both; }}
+.top-nav {{ display: flex; gap: 4px; padding: 10px 0; margin-bottom: 32px; border-bottom: 1px solid var(--surface); flex-wrap: wrap; animation: slideDown 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both; }}
+.nav-link {{ color: var(--muted); text-decoration: none; font-size: 0.9rem; font-weight: 500; padding: 8px 16px; border-radius: 6px; transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1); }}
+.nav-link:hover {{ color: var(--primary); background: rgba({hex_to_rgb(p["primary"])},0.08); text-decoration: none; transform: translateY(-1px); }}
+h1, h2, h3 {{ color: {p["heading_color"]}; transition: color 0.3s ease, text-shadow 0.3s ease; }}
+h1:hover, h2:hover, h3:hover {{ color: var(--primary); text-shadow: 0 0 15px {p["glow"]}; }}
+h1 {{ font-size: clamp(1.8rem, 4vw, 2.6rem); }}
+h2 {{ font-size: clamp(1.3rem, 3vw, 1.8rem); }}
+{heading_after_style}
+a {{ color: {p["link_color"]}; text-decoration: none; position: relative; transition: color 0.3s ease; }}
+a::after {{ content: ''; position: absolute; bottom: -2px; left: 0; width: 0; height: 1px; background: var(--primary); transition: width 0.3s cubic-bezier(0.22, 1, 0.36, 1); }}
+a:hover::after {{ width: 100%; }}
+{border_css}
+code {{ background: rgba({hex_to_rgb(p["primary"])},0.1); color: var(--primary); padding: 2px 6px; border-radius: 4px; font-size: 0.88em; }}
+pre code {{ background: none; color: var(--text); }}
+blockquote {{ background: var(--surface); padding: 1em 1.5em; color: var(--muted); }}
+blockquote:hover {{ border-left-color: var(--primary); }}
+li {{ margin-bottom: 6px; transition: transform 0.2s ease; }}
+li:hover {{ transform: translateX(3px); }}
+li::marker {{ color: var(--accent); }}
+img {{ border-radius: 8px; transition: transform 0.3s ease; }}
+img:hover {{ transform: scale(1.01); }}
+hr {{ border: none; height: 1px; background: var(--surface); margin: 2em 0; }}
+p {{ animation: fadeIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }}
+p:nth-child(2) {{ animation-delay: 0.08s; }}
+p:nth-child(3) {{ animation-delay: 0.14s; }}
+p:nth-child(4) {{ animation-delay: 0.2s; }}
+::selection {{ background: rgba({hex_to_rgb(p["primary"])},0.3); color: #fff; }}
+::-webkit-scrollbar {{ width: 8px; }}
+::-webkit-scrollbar-track {{ background: var(--bg); }}
+::-webkit-scrollbar-thumb {{ background: rgba({hex_to_rgb(p["primary"])},0.2); border-radius: 4px; }}
+::-webkit-scrollbar-thumb:hover {{ background: rgba({hex_to_rgb(p["primary"])},0.4); }}
+@keyframes fadeInUp {{ from {{ opacity: 0; transform: translateY(25px); }} to {{ opacity: 1; transform: translateY(0); }} }}
+@keyframes slideDown {{ from {{ opacity: 0; transform: translateY(-12px); }} to {{ opacity: 1; transform: translateY(0); }} }}
+@keyframes fadeIn {{ from {{ opacity: 0; }} to {{ opacity: 1; }} }}
+"""
+
+def hex_to_rgb(hex_color):
+    hex_color = hex_color.lstrip('#')
+    if len(hex_color) == 6:
+        r = int(hex_color[0:2], 16)
+        g = int(hex_color[2:4], 16)
+        b = int(hex_color[4:6], 16)
+        return f"{r},{g},{b}"
+    return "100,100,100"
