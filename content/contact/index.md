@@ -1,6 +1,6 @@
 # Контакты и социальные сети
 
-- [GitHub](https://github.com)
+- [GitHub](https://github.com/NikitaTLN)
 - [Instagram](https://instagram.com/nikitaljubimov_official)
 
 - [Личный сайт](https://nikita.ee)
